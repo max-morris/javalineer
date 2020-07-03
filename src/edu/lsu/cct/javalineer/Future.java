@@ -90,7 +90,7 @@ public class Future<T> {
      * Call to set a data value.
      */
     @SuppressWarnings("unchecked")
-    private void set(final T data) {
+    public void set(final T data) {
         final Future<T> self = this;
         // TODO: Fix this
         if (data instanceof Future) {
