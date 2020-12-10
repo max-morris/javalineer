@@ -7,7 +7,7 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MyPool {
-    int busy = 0;
+    volatile int busy = 0;
 
     synchronized void incrBusy() {
         busy++;
@@ -34,9 +34,10 @@ public class MyPool {
     class Worker extends Thread {
         final int id;
 
-        Worker(int id) {
+        Worker(final int id) {
             this.id = id;
-            me.set(id);
+            incrBusy();
+            ll.add(()->{ me.set(id); });
         }
 
         LinkedList<Runnable> ll = new LinkedList<>();
@@ -51,29 +52,37 @@ public class MyPool {
             }
         }
 
-        synchronized Runnable rmTask(boolean[] done) {
+        synchronized Runnable rmTaskWait() {
             while (ll.size() == 0) {
                 try {
                     wait();
                 } catch (InterruptedException ioe) {
                 }
             }
-            Runnable gt = ll.removeFirst();
-            done[0] = ll.size() == 0;
-            return gt;
+            return rmTask();
         }
-
-        public void run() {
-            boolean[] done = new boolean[1];
-            try {
-                while (true) {
-                    Runnable gt = rmTask(done);
+        synchronized Runnable rmTask() {
+            if(ll.size() == 0)
+                return null;
+            Runnable gt = ll.removeFirst();
+            if(ll.size() == 0) {
+                return ()->{
                     try {
                         gt.run();
                     } finally {
-                        if(done[0])
-                            decrBusy();
+                        decrBusy();
                     }
+                };
+            } else {
+                return gt;
+            }
+        }
+
+        public void run() {
+            try {
+                while (true) {
+                    Runnable gt = rmTaskWait();
+                    gt.run();
                 }
             } catch (Throwable ex) {
                 ex.printStackTrace();
@@ -81,14 +90,8 @@ public class MyPool {
             }
         }
 
-        private synchronized Runnable rmOne() {
-            if(ll.size() == 0)
-                return null;
-            else
-                return ll.removeFirst();
-        }
         public boolean runOne() {
-            Runnable run = rmOne();
+            Runnable run = rmTask();
             if(run != null) {
                 run.run();
                 return true;
@@ -121,14 +124,20 @@ public class MyPool {
         }
     }
 
-    public void runOne() {
+    public boolean runOne() {
+        assert size == workers.length;
+
+        Integer meId = me.get();
+        // We might not be on a worker thread...
+        if(meId == null) 
+            meId = RAND.nextInt(workers.length);
+
         for(int i=0;i<size;i++) {
-            while(me.get() == null)
-                Thread.yield();
-            int id = (me.get()+i) % size;
+            int id = (meId+i) % size;
             if(workers[id].runOne())
-                return;
+                return true;
         }
+        return false;
     }
 
     public String toString() {

@@ -150,7 +150,13 @@ public class Guard implements Comparable<Guard> {
                 final Future<Boolean> _result = new Future<>();
                 ca.act(_result);
                 assert _result.finished() : "Condition did not set value";
-                done = _result.get();
+                try {
+                    done = _result.getv().get();
+                } catch(Exception e) {
+                    // TODO: Not sure that this is the proper thing to do for exceptions
+                    e.printStackTrace();
+                    done = true;
+                }
             }
         });
     }

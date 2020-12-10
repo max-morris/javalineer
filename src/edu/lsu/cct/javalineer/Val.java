@@ -11,6 +11,12 @@ public class Val<T> {
             throw new RuntimeException(ex);
         return data;
     }
+    public T getNoEx() {
+        return data;
+    }
+    public Throwable getEx() {
+        return ex;
+    }
     public String toString() {
         if(ex != null)
             return ex.toString();

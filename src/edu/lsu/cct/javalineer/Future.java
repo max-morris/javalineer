@@ -35,17 +35,55 @@ public class Future<T> {
     public Future() {}
     public Future(T t) {
         data = t;
-        pending.set(DONE);
+        done();
+    }
+    public Future(Val<T> v) {
+        data = v.getNoEx();
+        ex = v.getEx();
+        done();
     }
     public Future(final Callable<T> t) {
         final Future<T> self = this;
-        Pool.run(()->{
+        Runnable r = ()->{
             try {
                 self.set(t.call());
             } catch(Exception e) {
                 self.setEx(e);
             }
-        });
+        };
+        Pool.run(r);
+    }
+
+    public static <T> Future<T> completedFuture(T t) {
+        return new Future<>(t);
+    }
+    public static <T> Future<T> applyAsync(Callable<T> c) {
+        return new Future<>(c);
+    }
+    public static <T> Future<T> applyAsyncFuture(Callable<Future<T>> c) {
+        final Future<T> res = new Future<>();
+        Runnable r2 = ()->{
+            try {
+                final Future<T> f = c.call();
+                Runnable r = ()->{
+                    res.setv(f.getv());
+                };
+                f.then(r);
+            } catch(Exception e) {
+                res.setEx(e);
+            }
+        };
+        Pool.run(r2);
+        return res;
+    }
+    public static <T> Future<T> apply(Callable<T> t) {
+        Future<T> f = new Future<>();
+        try {
+            f.set(t.call());
+        } catch(Exception e) {
+            f.setEx(e);
+        }
+        return f;
     }
 
     /**
@@ -86,11 +124,18 @@ public class Future<T> {
         }
     }
 
+    private void setv(Val<T> v) {
+        if(v.getEx() != null)
+            setEx(v.getEx());
+        else
+            set(v.getNoEx());
+    }
+
     /**
      * Call to set a data value.
      */
     @SuppressWarnings("unchecked")
-    public void set(final T data) {
+    private void set(final T data) {
         final Future<T> self = this;
         // TODO: Fix this
         if (data instanceof Future) {
@@ -126,7 +171,7 @@ public class Future<T> {
         final Future<R> f = new Future<>();
         Runnable r = ()->{
             try {
-                f.set(c.apply(get_()));
+                f.set(c.apply(getv()));
             } catch(Exception e) {
                 f.setEx(e);
             }
@@ -143,13 +188,9 @@ public class Future<T> {
     public <R> Future<R> thenFuture(final Function<Val<T>,Future<R>> c) {
         final Future<R> f = new Future<>();
         Runnable r = ()->{
-            final Future<R> fc = c.apply(get_());
+            final Future<R> fc = c.apply(getv());
             fc.then(()->{
-                try {
-                    f.set(fc.get_().get());
-                } catch(Exception e) {
-                    f.setEx(e);
-                }
+                f.setv(fc.getv());
             });
         };
         then(r);
@@ -166,7 +207,7 @@ public class Future<T> {
         final Future<R> f = new Future<>();
         final Runnable r1 = ()->{
             try {
-                f.set(c.apply(f1.get_(),f2.get_()));
+                f.set(c.apply(f1.getv(),f2.getv()));
             } catch(Exception e) {
                 f.setEx(e);
             }
@@ -184,7 +225,7 @@ public class Future<T> {
         final Future<R> f = new Future<>();
         final Runnable r1 = ()->{
             try {
-                f.set(c.apply(f1.get_(),f2.get_(),f3.get_()));
+                f.set(c.apply(f1.getv(),f2.getv(),f3.getv()));
             } catch(Exception e) {
                 f.setEx(e);
             }
@@ -220,16 +261,16 @@ public class Future<T> {
     public T get() {
         while(pending.get() != DONE)
            Pool.runOne();
-        return get_().get();
+        return getv().get();
     }
 
-    private Val<T> get_() {
+    Val<T> getv() {
         assert pending.get() == DONE;
         return new Val<T>(data,ex);
     }
 
     public void then(Consumer<Val<T>> c) {
-        Runnable r = ()->{ c.accept(this.get_()); };
+        Runnable r = ()->{ c.accept(this.getv()); };
         then(r);
     }
 

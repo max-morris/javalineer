@@ -20,7 +20,10 @@ public class Pool {
     public static void run(Runnable r) {
         POOL.add(r);
     }
-    public static void runOne() {
-        POOL.runOne();
+    public static boolean runOne() {
+        return POOL.runOne();
+    }
+    public static int busy() {
+        return POOL.busy;
     }
 }

@@ -21,7 +21,7 @@ public class TestFib {
             return new Future<Integer>(n);
         if(n < 20)
             return new Future<Integer>(fib_sync(n));
-        Future<Integer> f1 = fib(n-1);
+        Future<Integer> f1 = Future.applyAsyncFuture(()->{ return fib(n-1); });
         Future<Integer> f2 = fib(n-2);
         /*
         return Future.then(f1, f2, (v1, v2)-> {

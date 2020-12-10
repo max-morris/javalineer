@@ -20,7 +20,8 @@ public class TestFib2 {
             return new Future<Integer>(n);
         if(n < 20)
             return new Future<Integer>(fib_sync(n));
-        Future<Integer> f1 = fib(n-1);
+        Future<Integer> f1 = Future
+            .applyAsyncFuture(()->{ return fib(n-1); });
         Future<Integer> f2 = fib(n-2);
         return new Future<Integer>(f1.get() + f2.get());
     }
@@ -28,7 +29,7 @@ public class TestFib2 {
     public static void main(String[] args) {
         Test.requireAssert();
 
-        for(int i = 5; i < 40; i++) {
+        for(int i = 5; i < 30; i++) {
             final int f = i;
             Future<Integer> fib = fib(f);
             fib.get();
