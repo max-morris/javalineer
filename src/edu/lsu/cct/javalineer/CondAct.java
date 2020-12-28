@@ -1,5 +1,7 @@
 package edu.lsu.cct.javalineer;
 
+import java.util.concurrent.CompletableFuture;
+
 public interface CondAct {
-    public void act(Future<Boolean> _result);
+    void act(CompletableFuture<Boolean> _result);
 }

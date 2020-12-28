@@ -6,11 +6,9 @@
 package edu.lsu.cct.javalineer;
 
 import java.util.*;
-import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
-import java.util.function.Consumer;
 
 /**
  *
@@ -142,21 +140,28 @@ public class Guard implements Comparable<Guard> {
         runCondition(ts,c);
     }
 
-    public static void runCondition(final TreeSet<Guard> ts,final CondAct ca) {
-        runCondition(ts,new CondTask() {
+    public static void runCondition(final TreeSet<Guard> ts, final CondAct ca) {
+        runCondition(ts, new CondTask() {
             public void run() {
-                if(done)
+                if (done) {
                     return;
-                final Future<Boolean> _result = new Future<>();
-                ca.act(_result);
-                assert _result.finished() : "Condition did not set value";
-                try {
-                    done = _result.getv().get();
-                } catch(Exception e) {
-                    // TODO: Not sure that this is the proper thing to do for exceptions
-                    e.printStackTrace();
-                    done = true;
                 }
+
+                final CompletableFuture<Boolean> result = new CompletableFuture<>();
+                ca.act(result);
+
+                assert result.isDone() : "Condition did not set value";
+
+                result.whenComplete((res, err) -> {
+                    if (err != null) {
+                        // TODO: Not sure that this is the proper thing to do for exceptions
+                        err.printStackTrace();
+                        done = true;
+                    } else {
+                        assert res != null;
+                        done = res;
+                    }
+                }).join();
             }
         });
     }

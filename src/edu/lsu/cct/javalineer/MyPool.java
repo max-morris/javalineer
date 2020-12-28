@@ -1,12 +1,12 @@
 package edu.lsu.cct.javalineer;
 
-import java.util.ArrayList;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Random;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.function.Supplier;
 
-public class MyPool {
+public class MyPool implements Executor {
     volatile int busy = 0;
 
     synchronized void incrBusy() {
@@ -138,6 +138,16 @@ public class MyPool {
                 return true;
         }
         return false;
+    }
+
+    @Override
+    public void execute(Runnable command) {
+        add(command);
+    }
+
+    public <T> CompletableFuture<T> supply(Supplier<CompletableFuture<T>> supplier) {
+        return CompletableFuture.completedFuture(null)
+                                .thenComposeAsync(x -> supplier.get(), this);
     }
 
     public String toString() {

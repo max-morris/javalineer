@@ -5,6 +5,10 @@
  */
 package edu.lsu.cct.javalineer;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.function.Supplier;
+
 /**
  *
  * @author sbrandt
@@ -25,5 +29,13 @@ public class Pool {
     }
     public static int busy() {
         return POOL.busy;
+    }
+
+    public static Executor getExecutor() {
+        return POOL;
+    }
+
+    public static <T> CompletableFuture<T> supply(Supplier<CompletableFuture<T>> supplier) {
+        return POOL.supply(supplier);
     }
 }
