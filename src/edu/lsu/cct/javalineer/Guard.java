@@ -150,8 +150,6 @@ public class Guard implements Comparable<Guard> {
                 final CompletableFuture<Boolean> result = new CompletableFuture<>();
                 ca.act(result);
 
-                assert result.isDone() : "Condition did not set value";
-
                 result.whenComplete((res, err) -> {
                     if (err != null) {
                         // TODO: Not sure that this is the proper thing to do for exceptions
@@ -161,7 +159,7 @@ public class Guard implements Comparable<Guard> {
                         assert res != null;
                         done = res;
                     }
-                }).join();
+                });
             }
         });
     }
