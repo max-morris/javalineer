@@ -68,9 +68,15 @@ public class Guard implements Comparable<Guard> {
         ts.add(g3);
         Guard.runGuarded(ts,()->{ c.run(g1.var,g2.var,g3.var); });
     }
+
     public static void runGuarded(TreeSet<Guard> gset, Runnable r) {
         GuardTask gt = new GuardTask(gset,r);
         gt.run();
+    }
+
+    public static void nowOrNever(TreeSet<Guard> gSet, Runnable r) {
+        GuardTask gt = new GuardTask(gSet, r);
+        gt.runImmediately();
     }
 
     CondMgr cmgr = new CondMgr();
