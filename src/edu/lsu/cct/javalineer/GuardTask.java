@@ -79,24 +79,29 @@ public class GuardTask {
     }
 
     public void runImmediately() {
-        if(gset.size()==0) {
-            run(r,gset);
+        if(gset.size() == 0) {
+            run(r, gset);
             return;
         }
         Guard g = gset.get(index);
-        GuardTask prev = g.task.getAndSet(this);
+        GuardTask prev = g.task.get();
         if(prev == null) {
-            runTask(g);
+            if (g.task.compareAndSet(null, this)) {
+                runTask(g);
+            } else {
+                runTask(null);
+            }
         } else {
             assert prev.next.size() == prev.gset.size();
             var nextt = prev.next.get(prev.index);
             assert nextt != null;
-            if(!nextt.compareAndSet(null,null)) {
+            if (nextt.get() == null) {
+                runTask(null);
+            } else if (g.task.compareAndSet(prev, this)) {
                 runTask(g);
             } else {
-                runNoOp();
+                runTask(null);
             }
-            assert nextt.get() != null;
         }
     }
     
@@ -118,41 +123,17 @@ public class GuardTask {
         if(index + 1 == gset.size()) {
             // Don't need to force async
             Pool.run(()->{
-                run(r,gset);
+                if (g == null) {
+                    run(r, List.of());
+                } else {
+                    run(r, gset);
+                }
                 free();
             });
         } else {
             index++;
             assert index < gset.size();
             run();
-        }
-    }
-
-    private void runNoOp() {
-        if(index + 1 == gset.size()) {
-            // Don't need to force async
-            Pool.run(()->{
-                run(() -> {}, List.of());
-                //free();
-            });
-        } else {
-            index++;
-            assert index < gset.size();
-            runImmediately();
-        }
-    }
-
-    private void runTaskWithoutGuards() {
-        if(index + 1 == gset.size()) {
-            // Don't need to force async
-            Pool.run(()->{
-                run(r, List.of());
-                free();
-            });
-        } else {
-            index++;
-            assert index < gset.size();
-            runImmediately();
         }
     }
 }

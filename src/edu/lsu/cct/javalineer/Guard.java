@@ -38,6 +38,13 @@ public class Guard implements Comparable<Guard> {
         return ts.contains(g);
     }
 
+    public static boolean has(TreeSet<Guard> guards) {
+        TreeSet<Guard> ts = GuardTask.GUARDS_HELD.get();
+        if (ts == null) {
+            return false;
+        }
+        return ts.containsAll(guards);
+    }
 
     public void runGuarded(Runnable r) {
         TreeSet<Guard> tg = new TreeSet<>();
@@ -74,9 +81,32 @@ public class Guard implements Comparable<Guard> {
         gt.run();
     }
 
+    public static void nowOrNever(Guard g, Runnable r) {
+        nowOrNever(new TreeSet<>() {{add(g);}}, r);
+    }
+
     public static void nowOrNever(TreeSet<Guard> gSet, Runnable r) {
-        GuardTask gt = new GuardTask(gSet, r);
+        GuardTask gt = new GuardTask(gSet, () -> {
+            if (Guard.has(gSet)) {
+                r.run();
+            }
+        });
         gt.runImmediately();
+    }
+
+    public static void nowOrElse(TreeSet<Guard> gSet, Runnable r, Runnable orElse) {
+        GuardTask gt = new GuardTask(gSet, () -> {
+            if (Guard.has(gSet)) {
+                r.run();
+            } else {
+                orElse.run();
+            }
+        });
+        gt.runImmediately();
+    }
+
+    public static void nowOrElse(Guard g, Runnable r, Runnable orElse) {
+        nowOrElse(new TreeSet<>() {{ add(g); }}, r, orElse);
     }
 
     CondMgr cmgr = new CondMgr();
