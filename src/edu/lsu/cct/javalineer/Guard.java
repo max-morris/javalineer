@@ -123,33 +123,42 @@ public class Guard implements Comparable<Guard> {
         Guard.nowOrElse(new TreeSet<>() {{ add(g1); add(g2); add(g3); }}, () -> c.run(g1.var, g2.var, g3.var), orElse);
     }
 
+    private static <T> CompletableFuture<Void> setNow(final GuardVar<T> gv, final AtomicReference<Optional<Var<T>>> ref) {
+        final var fut = new CompletableFuture<Void>();
+        gv.nowOrElse(() -> {
+            ref.set(Optional.of(gv.var));
+            fut.complete(null);
+        }, () -> {
+            ref.set(Optional.empty());
+            fut.complete(null);
+        });
+        return fut;
+    }
+
     public static <T> void now(final GuardVar<T> g, final OptionalGuardTask1<T> c) {
         g.nowOrElse(() -> c.run(Optional.of(g.var)), () -> c.run(Optional.empty()));
     }
 
     public static <T1, T2> void now(final GuardVar<T1> g1, final GuardVar<T2> g2, final OptionalGuardTask2<T1, T2> c) {
-        final AtomicReference<Optional<Var<T1>>> o1 = new AtomicReference<>();
-        final AtomicReference<Optional<Var<T2>>> o2 = new AtomicReference<>();
+        final var o1 = new AtomicReference<Optional<Var<T1>>>();
+        final var o2 = new AtomicReference<Optional<Var<T2>>>();
 
-        g1.nowOrElse(() -> o1.set(Optional.of(g1.var)), () -> o1.set(Optional.empty()));
-        g2.nowOrElse(() -> o2.set(Optional.of(g2.var)), () -> o2.set(Optional.empty()));
-
-        Guard.runAlways(new TreeSet<>() {{ add(g1); add(g2); }}, () -> c.run(o1.get(), o2.get()));
+        CompletableFuture.allOf(setNow(g1, o1), setNow(g2, o2))
+                         .thenRun(() -> Guard.runAlways(new TreeSet<>() {{ add(g1); add(g2); }},
+                                  () -> c.run(o1.get(), o2.get())));
     }
 
     public static <T1, T2, T3> void now(final GuardVar<T1> g1,
                                         final GuardVar<T2> g2,
                                         final GuardVar<T3> g3,
                                         final OptionalGuardTask3<T1, T2, T3> c) {
-        final AtomicReference<Optional<Var<T1>>> o1 = new AtomicReference<>();
-        final AtomicReference<Optional<Var<T2>>> o2 = new AtomicReference<>();
-        final AtomicReference<Optional<Var<T3>>> o3 = new AtomicReference<>();
+        final var o1 = new AtomicReference<Optional<Var<T1>>>();
+        final var o2 = new AtomicReference<Optional<Var<T2>>>();
+        final var o3 = new AtomicReference<Optional<Var<T3>>>();
 
-        g1.nowOrElse(() -> o1.set(Optional.of(g1.var)), () -> o1.set(Optional.empty()));
-        g2.nowOrElse(() -> o2.set(Optional.of(g2.var)), () -> o2.set(Optional.empty()));
-        g3.nowOrElse(() -> o3.set(Optional.of(g3.var)), () -> o3.set(Optional.empty()));
-
-        Guard.runAlways(new TreeSet<>() {{ add(g1); add(g2); add(g3); }}, () -> c.run(o1.get(), o2.get(), o3.get()));
+        CompletableFuture.allOf(setNow(g1, o1), setNow(g2, o2), setNow(g3, o3))
+                         .thenRun(() -> Guard.runAlways(new TreeSet<>() {{ add(g1); add(g2); add(g3); }},
+                                  () -> c.run(o1.get(), o2.get(), o3.get())));
     }
 
     public static <T1, T2, T3, T4> void now(final GuardVar<T1> g1,
@@ -157,17 +166,14 @@ public class Guard implements Comparable<Guard> {
                                             final GuardVar<T3> g3,
                                             final GuardVar<T4> g4,
                                             final OptionalGuardTask4<T1, T2, T3, T4> c) {
-        final AtomicReference<Optional<Var<T1>>> o1 = new AtomicReference<>();
-        final AtomicReference<Optional<Var<T2>>> o2 = new AtomicReference<>();
-        final AtomicReference<Optional<Var<T3>>> o3 = new AtomicReference<>();
-        final AtomicReference<Optional<Var<T4>>> o4 = new AtomicReference<>();
+        final var o1 = new AtomicReference<Optional<Var<T1>>>();
+        final var o2 = new AtomicReference<Optional<Var<T2>>>();
+        final var o3 = new AtomicReference<Optional<Var<T3>>>();
+        final var o4 = new AtomicReference<Optional<Var<T4>>>();
 
-        g1.nowOrElse(() -> o1.set(Optional.of(g1.var)), () -> o1.set(Optional.empty()));
-        g2.nowOrElse(() -> o2.set(Optional.of(g2.var)), () -> o2.set(Optional.empty()));
-        g3.nowOrElse(() -> o3.set(Optional.of(g3.var)), () -> o3.set(Optional.empty()));
-        g4.nowOrElse(() -> o4.set(Optional.of(g4.var)), () -> o4.set(Optional.empty()));
-
-        Guard.runAlways(new TreeSet<>() {{ add(g1); add(g2); add(g3); add(g4); }}, () -> c.run(o1.get(), o2.get(), o3.get(), o4.get()));
+        CompletableFuture.allOf(setNow(g1, o1), setNow(g2, o2), setNow(g3, o3), setNow(g4, o4))
+                         .thenRun(() -> Guard.runAlways(new TreeSet<>() {{ add(g1); add(g2); add(g3); add(g4); }},
+                                  () -> c.run(o1.get(), o2.get(), o3.get(), o4.get())));
     }
 
     public static void runGuarded(TreeSet<Guard> gset, Runnable r) {
