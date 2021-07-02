@@ -91,6 +91,20 @@ public class Guard implements Comparable<Guard> {
         Guard.runGuarded(ts,()->{ c.run(g1.var,g2.var,g3.var); });
     }
 
+    public static <T1, T2, T3, T4> void runGuarded(
+            final GuardVar<T1> g1,
+            final GuardVar<T2> g2,
+            final GuardVar<T3> g3,
+            final GuardVar<T4> g4,
+            final GuardTask4<T1, T2, T3, T4> c) {
+        final TreeSet<Guard> ts = new TreeSet<>();
+        ts.add(g1);
+        ts.add(g2);
+        ts.add(g3);
+        ts.add(g4);
+        Guard.runGuarded(ts, () -> c.run(g1.var, g2.var, g3.var, g4.var));
+    }
+
     public static <T> void nowOrNever(final GuardVar<T> g, final GuardTask1<T> c) {
         g.nowOrNever(() -> c.run(g.var));
     }
