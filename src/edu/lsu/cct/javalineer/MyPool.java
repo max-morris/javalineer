@@ -27,6 +27,9 @@ public class MyPool {
             } catch (InterruptedException ioe) {
             }
         }
+        for(Worker w : me) {
+            assert ll.size()==0;
+        }
     }
 
     ThreadLocal<Integer> me = new ThreadLocal<>();
