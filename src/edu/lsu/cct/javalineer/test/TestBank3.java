@@ -31,35 +31,29 @@ public class TestBank3 {
 
         for(int i=0;i<1000;i++) {
             Pool.run(()->{
-                Guard.runCondition(a,new CondCheck1<>() {
-                    public boolean check(Var<Bank> bank) {
-                        boolean b = bank.get().withdraw(1);
-                        if(b) wc.getAndIncrement();
-                        return b;
+                Guard.runCondition(a,(Var<Bank> bank)->{
+                        boolean b2 = bank.get().withdraw(1);
+                        if(b2) wc.getAndIncrement();
+                        return b2;
+                });
+            });
+            Pool.run(()->{
+                Guard.runCondition(a,b,(Var<Bank> banka,Var<Bank> bankb)->{
+                    if(bankb.get().withdraw(1)) {
+                        banka.get().deposit(1);
+                        banka.signal();
+                        tc.getAndIncrement();
+                        return true;
+                    } else {
+                        return false;
                     }
                 });
             });
             Pool.run(()->{
-                Guard.runCondition(a,b,new CondCheck2<>() {
-                    public boolean check(Var<Bank> banka,Var<Bank> bankb) {
-                        if(bankb.get().withdraw(1)) {
-                            banka.get().deposit(1);
-                            banka.signal();
-                            tc.getAndIncrement();
-                            return true;
-                        } else {
-                            return false;
-                        }
-                    }
-                });
-            });
-            Pool.run(()->{
-                Guard.runGuarded(b,new GuardTask1<>() {
-                    public void run(Var<Bank> bank) {
+                Guard.runGuarded(b,(Var<Bank> bank)->{
                         bank.get().deposit(1);
                         bank.signal();
                         dc.getAndIncrement();
-                    }
                 });
             });
         }

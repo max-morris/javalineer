@@ -1,4 +1,5 @@
 plugins {
+    id 'java'
     id 'java-library'
 }
 
@@ -10,7 +11,7 @@ sourceSets {
     main {
         java {
             srcDir 'src'
-            exclude 'edu/lsu/cct/javalineer/test/**'
+            // exclude 'edu/lsu/cct/javalineer/test/**'
         }    
     }
 }

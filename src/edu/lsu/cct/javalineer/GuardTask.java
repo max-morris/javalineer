@@ -77,6 +77,33 @@ public class GuardTask {
             assert nextt.get() != null;
         }
     }
+
+    public void runImmediately() {
+        if(gset.size() == 0) {
+            run(r, gset);
+            return;
+        }
+        Guard g = gset.get(index);
+        GuardTask prev = g.task.get();
+        if(prev == null) {
+            if (g.task.compareAndSet(null, this)) {
+                runTask(g);
+            } else {
+                runTask(null);
+            }
+        } else {
+            assert prev.next.size() == prev.gset.size();
+            var nextt = prev.next.get(prev.index);
+            assert nextt != null;
+            if (nextt.get() == null) {
+                runTask(null);
+            } else if (g.task.compareAndSet(prev, this)) {
+                runTask(g);
+            } else {
+                runTask(null);
+            }
+        }
+    }
     
     private void free() {
         Guard g = gset.get(index);
@@ -96,7 +123,11 @@ public class GuardTask {
         if(index + 1 == gset.size()) {
             // Don't need to force async
             Pool.run(()->{
-                run(r,gset);
+                if (g == null) {
+                    run(r, List.of());
+                } else {
+                    run(r, gset);
+                }
                 free();
             });
         } else {

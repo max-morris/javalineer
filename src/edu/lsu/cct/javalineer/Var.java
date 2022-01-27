@@ -1,6 +1,6 @@
 package edu.lsu.cct.javalineer;
 
-public class Var<T> {
+public class Var<T> implements Get<T>, Set<T> {
     final Guard g;
     T data;
 
