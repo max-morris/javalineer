@@ -27,12 +27,12 @@ public class MyPool {
             } catch (InterruptedException ioe) {
             }
         }
-        for(Worker w : me) {
-            assert ll.size()==0;
+        for(Worker w : workers) {
+            assert w.ll.size()==0;
         }
     }
 
-    ThreadLocal<Integer> me = new ThreadLocal<>();
+    final static ThreadLocal<Integer> me = new ThreadLocal<>();
 
     class Worker extends Thread {
         final int id;
