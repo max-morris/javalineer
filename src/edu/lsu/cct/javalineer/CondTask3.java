@@ -13,8 +13,17 @@ public class CondTask3<T1,T2,T3> extends CondTask {
         this.check = check;
     }
 
-    final public void run() {
-        if(!done)
-            done = check.check(t1,t2,t3);
+    public final void run() {
+        if (!done) {
+            try {
+                done = check.check(t1, t2, t3);
+                if (done) {
+                    fut.complete(null);
+                }
+            } catch (Exception e) {
+                done = true;
+                fut.completeExceptionally(e);
+            }
+        }
     }
 }

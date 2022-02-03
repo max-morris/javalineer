@@ -241,29 +241,29 @@ public class Guard implements Comparable<Guard> {
         cmgr.signalAll();
     }
 
-    public static <T> void runCondition(
+    public static <T> CompletableFuture<Void> runCondition(
             GuardVar<T> gv,
             final CondCheck1<T> c) {
-        Guard.runCondition(gv,new CondTask1<T>(c));
+        return Guard.runCondition(gv,new CondTask1<T>(c));
     }
 
-    public static <T> void runCondition(
+    public static <T> CompletableFuture<Void> runCondition(
             GuardVar<T> gv,
             final CondTask1<T> c) {
         TreeSet<Guard> ts = new TreeSet<>();
         ts.add(gv);
         c.set1(gv.var);
-        runCondition(ts,c);
+        return runCondition(ts,c);
     }
 
-    public static <T1,T2> void runCondition(
+    public static <T1,T2> CompletableFuture<Void> runCondition(
             GuardVar<T1> gv1,
             GuardVar<T2> gv2,
             final CondCheck2<T1,T2> c) {
-        Guard.runCondition(gv1,gv2,new CondTask2<T1,T2>(c));
+        return Guard.runCondition(gv1,gv2,new CondTask2<T1,T2>(c));
     }
 
-    public static <T1,T2> void runCondition(
+    public static <T1,T2> CompletableFuture<Void> runCondition(
             GuardVar<T1> gv1,
             GuardVar<T2> gv2,
             final CondTask2<T1,T2> c) {
@@ -272,18 +272,18 @@ public class Guard implements Comparable<Guard> {
         ts.add(gv2);
         c.set1(gv1.var);
         c.set2(gv2.var);
-        runCondition(ts,c);
+        return runCondition(ts,c);
     }
 
-    public static <T1,T2,T3> void runCondition(
+    public static <T1,T2,T3> CompletableFuture<Void> runCondition(
             GuardVar<T1> gv1,
             GuardVar<T2> gv2,
             GuardVar<T3> gv3,
             final CondCheck3<T1,T2,T3> c) {
-        Guard.runCondition(gv1,gv2,gv3,new CondTask3<T1,T2,T3>(c));
+        return Guard.runCondition(gv1,gv2,gv3,new CondTask3<T1,T2,T3>(c));
     }
 
-    public static <T1,T2,T3> void runCondition(
+    public static <T1,T2,T3> CompletableFuture<Void> runCondition(
             GuardVar<T1> gv1,
             GuardVar<T2> gv2,
             GuardVar<T3> gv3,
@@ -295,34 +295,10 @@ public class Guard implements Comparable<Guard> {
         c.set1(gv1.var);
         c.set2(gv2.var);
         c.set3(gv3.var);
-        runCondition(ts,c);
+        return runCondition(ts,c);
     }
 
-    public static void runCondition(final TreeSet<Guard> ts, final CondAct ca) {
-        runCondition(ts, new CondTask() {
-            public void run() {
-                if (done) {
-                    return;
-                }
-
-                final CompletableFuture<Boolean> result = new CompletableFuture<>();
-                ca.act(result);
-
-                result.whenComplete((res, err) -> {
-                    if (err != null) {
-                        // TODO: Not sure that this is the proper thing to do for exceptions
-                        err.printStackTrace();
-                        done = true;
-                    } else {
-                        assert res != null;
-                        done = res;
-                    }
-                });
-            }
-        });
-    }
-
-    public static void runCondition(final TreeSet<Guard> ts,final CondTask c) {
+    public static CompletableFuture<Void> runCondition(final TreeSet<Guard> ts,final CondTask c) {
         assert ts.size() > 0;
         Cond cond = new Cond();
         cond.task = c;
@@ -330,5 +306,6 @@ public class Guard implements Comparable<Guard> {
         for(Guard g : ts)
             g.cmgr.add(new CondLink(cond));
         Guard.runGuarded(ts,c);
+        return cond.task.fut;
     }
 }

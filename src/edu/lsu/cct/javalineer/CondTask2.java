@@ -12,7 +12,16 @@ public class CondTask2<T1,T2> extends CondTask {
     }
 
     public final void run() {
-        if(!done)
-            done = check.check(t1,t2);
+        if (!done) {
+            try {
+                done = check.check(t1, t2);
+                if (done) {
+                    fut.complete(null);
+                }
+            } catch (Exception e) {
+                done = true;
+                fut.completeExceptionally(e);
+            }
+        }
     }
 }

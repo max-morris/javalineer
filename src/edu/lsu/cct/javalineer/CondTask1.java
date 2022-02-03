@@ -10,7 +10,16 @@ public class CondTask1<T> extends CondTask {
     }
 
     public final void run() {
-        if(!done)
-            done = check.check(t);
+        if (!done) {
+           try {
+               done = check.check(t);
+               if (done) {
+                   fut.complete(null);
+               }
+           } catch (Exception e) {
+               done = true;
+               fut.completeExceptionally(e);
+           }
+        }
     }
 }
