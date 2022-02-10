@@ -32,6 +32,10 @@ jobs:
       uses: gradle/gradle-build-action@937999e9cc2425eddc7fd62d1053baf041147db7
       with:
         arguments: build
+        
+    - name: Compute short SHA
+      id: vars
+      run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
 
     # The USERNAME and TOKEN need to correspond to the credentials environment variables used in
     # the publishing section of your build.gradle
@@ -43,3 +47,5 @@ jobs:
         GITHUB_ACTOR: ${{ github.actor }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GITHUB_REPO: ${{ github.repository }}
+        GITHUB_REFNAME: ${{ github.ref_name }}
+        GITHUB_HASH: ${{ steps.vars.outputs.sha_short }}
