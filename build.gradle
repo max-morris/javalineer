@@ -27,6 +27,7 @@ publishing {
     publications {
         maven(MavenPublication) {
             from components.java
+            version System.getenv("GITHUB_REFNAME") + "-" + System.getenv("GITHUB_HASH")
         }
     }
 
