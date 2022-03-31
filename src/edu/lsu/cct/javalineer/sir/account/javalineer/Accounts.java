@@ -44,7 +44,7 @@ public class Accounts {
         }
 
         public CompletableFuture<String> toStringAsync() {
-            var ret = new CompletableFuture<String>();
+            CompletableFuture<String> ret = new CompletableFuture<>();
             Guard.runGuarded(balance, (b) -> ret.complete(String.format("Account(%d): $%f", id, b.get())));
             return ret;
         }
@@ -53,7 +53,7 @@ public class Accounts {
     private static final int N_ACCOUNTS = 10;
 
     public static void main(String[] args) {
-        var accounts = new Account[N_ACCOUNTS];
+        Account[] accounts = new Account[N_ACCOUNTS];
 
         for (int i = 0; i < N_ACCOUNTS; i++) {
             accounts[i] = new Account(100);
