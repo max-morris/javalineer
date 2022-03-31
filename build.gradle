@@ -6,6 +6,8 @@ plugins {
 
 group = 'edu.lsu.cct.javalineer'
 
+sourceCompatibility = 1.8
+
 repositories {
 
 }

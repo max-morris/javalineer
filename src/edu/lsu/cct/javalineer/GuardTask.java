@@ -70,7 +70,7 @@ public class GuardTask {
             runTask(g);
         } else {
             assert prev.next.size() == prev.gset.size();
-            var nextt = prev.next.get(prev.index);
+            AtomicReference<GuardTask> nextt = prev.next.get(prev.index);
             assert nextt != null;
             if(!nextt.compareAndSet(null,this))
                 runTask(g);
@@ -93,7 +93,7 @@ public class GuardTask {
             }
         } else {
             assert prev.next.size() == prev.gset.size();
-            var nextt = prev.next.get(prev.index);
+            AtomicReference<GuardTask> nextt = prev.next.get(prev.index);
             assert nextt != null;
             if (nextt.get() == null) {
                 runTask(null);
@@ -124,7 +124,7 @@ public class GuardTask {
             // Don't need to force async
             Pool.run(()->{
                 if (g == null) {
-                    run(r, List.of());
+                    run(r, new ArrayList<>());
                 } else {
                     run(r, gset);
                 }

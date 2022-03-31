@@ -110,7 +110,7 @@ public class Guard implements Comparable<Guard> {
     }
 
     public static <T1,T2> void nowOrNever(final GuardVar<T1> g1, final GuardVar<T2> g2, final GuardTask2<T1,T2> c) {
-        Guard.nowOrNever(new TreeSet<>() {{ add(g1); add(g2); }}, () -> c.run(g1.var, g2.var));
+        Guard.nowOrNever(new TreeSet<Guard>() {{ add(g1); add(g2); }}, () -> c.run(g1.var, g2.var));
     }
 
     public static <T1,T2,T3> void nowOrNever(
@@ -118,7 +118,7 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T2> g2,
             final GuardVar<T3> g3,
             final GuardTask3<T1,T2,T3> c) {
-        Guard.nowOrNever(new TreeSet<>() {{ add(g1); add(g2); add(g3); }}, () -> c.run(g1.var, g2.var, g3.var));
+        Guard.nowOrNever(new TreeSet<Guard>() {{ add(g1); add(g2); add(g3); }}, () -> c.run(g1.var, g2.var, g3.var));
     }
 
     public static <T> void nowOrElse(final GuardVar<T> g, final GuardTask1<T> c, final Runnable orElse) {
@@ -126,7 +126,7 @@ public class Guard implements Comparable<Guard> {
     }
 
     public static <T1,T2> void nowOrElse(final GuardVar<T1> g1, final GuardVar<T2> g2, final GuardTask2<T1,T2> c, final Runnable orElse) {
-        Guard.nowOrElse(new TreeSet<>() {{ add(g1); add(g2); }}, () -> c.run(g1.var, g2.var), orElse);
+        Guard.nowOrElse(new TreeSet<Guard>() {{ add(g1); add(g2); }}, () -> c.run(g1.var, g2.var), orElse);
     }
 
     public static <T1,T2,T3> void nowOrElse(final GuardVar<T1> g1,
@@ -134,11 +134,11 @@ public class Guard implements Comparable<Guard> {
                                             final GuardVar<T3> g3,
                                             final GuardTask3<T1,T2,T3> c,
                                             final Runnable orElse) {
-        Guard.nowOrElse(new TreeSet<>() {{ add(g1); add(g2); add(g3); }}, () -> c.run(g1.var, g2.var, g3.var), orElse);
+        Guard.nowOrElse(new TreeSet<Guard>() {{ add(g1); add(g2); add(g3); }}, () -> c.run(g1.var, g2.var, g3.var), orElse);
     }
 
     private static <T> CompletableFuture<Void> setNow(final GuardVar<T> gv, final AtomicReference<Optional<Var<T>>> ref) {
-        final var fut = new CompletableFuture<Void>();
+        final CompletableFuture<Void> fut = new CompletableFuture<Void>();
         gv.nowOrElse(() -> {
             ref.set(Optional.of(gv.var));
             fut.complete(null);
@@ -154,11 +154,11 @@ public class Guard implements Comparable<Guard> {
     }
 
     public static <T1, T2> void now(final GuardVar<T1> g1, final GuardVar<T2> g2, final OptionalGuardTask2<T1, T2> c) {
-        final var o1 = new AtomicReference<Optional<Var<T1>>>();
-        final var o2 = new AtomicReference<Optional<Var<T2>>>();
+        final AtomicReference<Optional<Var<T1>>> o1 = new AtomicReference<>();
+        final AtomicReference<Optional<Var<T2>>> o2 = new AtomicReference<>();
 
         CompletableFuture.allOf(setNow(g1, o1), setNow(g2, o2))
-                         .thenRun(() -> Guard.runAlways(new TreeSet<>() {{ add(g1); add(g2); }},
+                         .thenRun(() -> Guard.runAlways(new TreeSet<Guard>() {{ add(g1); add(g2); }},
                                   () -> c.run(o1.get(), o2.get())));
     }
 
@@ -166,12 +166,12 @@ public class Guard implements Comparable<Guard> {
                                         final GuardVar<T2> g2,
                                         final GuardVar<T3> g3,
                                         final OptionalGuardTask3<T1, T2, T3> c) {
-        final var o1 = new AtomicReference<Optional<Var<T1>>>();
-        final var o2 = new AtomicReference<Optional<Var<T2>>>();
-        final var o3 = new AtomicReference<Optional<Var<T3>>>();
+        final AtomicReference<Optional<Var<T1>>> o1 = new AtomicReference<>();
+        final AtomicReference<Optional<Var<T2>>> o2 = new AtomicReference<>();
+        final AtomicReference<Optional<Var<T3>>> o3 = new AtomicReference<>();
 
         CompletableFuture.allOf(setNow(g1, o1), setNow(g2, o2), setNow(g3, o3))
-                         .thenRun(() -> Guard.runAlways(new TreeSet<>() {{ add(g1); add(g2); add(g3); }},
+                         .thenRun(() -> Guard.runAlways(new TreeSet<Guard>() {{ add(g1); add(g2); add(g3); }},
                                   () -> c.run(o1.get(), o2.get(), o3.get())));
     }
 
@@ -180,13 +180,13 @@ public class Guard implements Comparable<Guard> {
                                             final GuardVar<T3> g3,
                                             final GuardVar<T4> g4,
                                             final OptionalGuardTask4<T1, T2, T3, T4> c) {
-        final var o1 = new AtomicReference<Optional<Var<T1>>>();
-        final var o2 = new AtomicReference<Optional<Var<T2>>>();
-        final var o3 = new AtomicReference<Optional<Var<T3>>>();
-        final var o4 = new AtomicReference<Optional<Var<T4>>>();
+        final AtomicReference<Optional<Var<T1>>> o1 = new AtomicReference<>();
+        final AtomicReference<Optional<Var<T2>>> o2 = new AtomicReference<>();
+        final AtomicReference<Optional<Var<T3>>> o3 = new AtomicReference<>();
+        final AtomicReference<Optional<Var<T4>>> o4 = new AtomicReference<>();
 
         CompletableFuture.allOf(setNow(g1, o1), setNow(g2, o2), setNow(g3, o3), setNow(g4, o4))
-                         .thenRun(() -> Guard.runAlways(new TreeSet<>() {{ add(g1); add(g2); add(g3); add(g4); }},
+                         .thenRun(() -> Guard.runAlways(new TreeSet<Guard>() {{ add(g1); add(g2); add(g3); add(g4); }},
                                   () -> c.run(o1.get(), o2.get(), o3.get(), o4.get())));
     }
 
@@ -196,7 +196,7 @@ public class Guard implements Comparable<Guard> {
     }
 
     public static void nowOrNever(Guard g, Runnable r) {
-        nowOrNever(new TreeSet<>() {{add(g);}}, r);
+        nowOrNever(new TreeSet<Guard>() {{add(g);}}, r);
     }
 
     public static void nowOrNever(TreeSet<Guard> gSet, Runnable r) {
@@ -228,7 +228,7 @@ public class Guard implements Comparable<Guard> {
     }
 
     public static void nowOrElse(Guard g, Runnable r, Runnable orElse) {
-        nowOrElse(new TreeSet<>() {{ add(g); }}, r, orElse);
+        nowOrElse(new TreeSet<Guard>() {{ add(g); }}, r, orElse);
     }
 
     CondMgr cmgr = new CondMgr();
