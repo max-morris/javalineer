@@ -16,7 +16,12 @@ import java.util.function.Supplier;
  * @author sbrandt
  */
 public class Pool {
+    /*
     private static final ForkJoinPool POOL = new ForkJoinPool(
+            Integer.parseInt(System.getProperty("POOL_SIZE", "4"))
+    );
+    */
+    private static final MyPool POOL = new MyPool(
             Integer.parseInt(System.getProperty("POOL_SIZE", "4"))
     );
 

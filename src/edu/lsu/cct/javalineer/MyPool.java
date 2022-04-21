@@ -5,9 +5,12 @@ import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Supplier;
+import java.util.concurrent.TimeUnit;
 
 public class MyPool implements Executor {
     volatile int busy = 0;
+
+    public int getParallelism() { return workers.length; }
 
     synchronized void incrBusy() {
         busy++;
@@ -20,6 +23,10 @@ public class MyPool implements Executor {
             notifyAll();
     }
 
+    public boolean awaitQuiescence(long t,TimeUnit u) {
+        awaitQuiet();
+        return true;
+    }
     synchronized void awaitQuiet() {
         while (busy > 0) {
             try {
