@@ -20,6 +20,10 @@ public class MyPool implements Executor {
             notifyAll();
     }
 
+    public boolean awaitQuiescence(long lg, java.util.concurrent.TimeUnit tu) {
+        awaitQuiet();
+        return true;
+    }
     synchronized void awaitQuiet() {
         while (busy > 0) {
             try {
@@ -113,6 +117,8 @@ public class MyPool implements Executor {
         int n = RAND.nextInt(workers.length);
         workers[n].addTask(gt);
     }
+
+    public int getParallelism() { return size; }
 
     final int size;
     Worker[] workers;
