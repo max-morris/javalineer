@@ -63,21 +63,24 @@ public class GuardTask {
 
     public void run() {
         if(gset.size()==0) {
-            assert flagRun() : String.format("Task [%d] is running more than once!", id);
+            //assert flagRun() : String.format("Task [%d] is running more than once!", id);
+            flagRunThrow();
             run(r,gset);
             return;
         }
         Guard g = gset.get(index);
         GuardTask prev = g.task.getAndSet(this);
         if(prev == null) {
-            assert flagRun() : String.format("Task [%d] is running more than once!", id);
+            //assert flagRun() : String.format("Task [%d] is running more than once!", id);
+            flagRunThrow();
             runTask(g);
         } else {
             assert prev.next.size() == prev.gset.size();
             var nextt = prev.next.get(prev.index);
             assert nextt != null;
             if(!nextt.compareAndSet(null,this)) {
-                assert flagRun() : String.format("Task [%d] is running more than once!", id);
+                //assert flagRun() : String.format("Task [%d] is running more than once!", id);
+                flagRunThrow();
                 runTask(g);
             }
             assert nextt.get() != null;
@@ -85,7 +88,8 @@ public class GuardTask {
     }
 
     public void runImmediately() {
-        assert flagRun() : String.format("Task [%d] is running more than once!", id);
+        //assert flagRun() : String.format("Task [%d] is running more than once!", id);
+        flagRunThrow();
 
         if(gset.size() == 0) {
             run(r, gset);
@@ -118,7 +122,8 @@ public class GuardTask {
         if (!next.get(index).compareAndSet(null, DONE)) {
             GuardTask prev = next.get(index).get();
             assert prev != DONE;
-            assert prev.flagRun() : String.format("Task [%d] is running more than once!", prev.id);
+            //assert prev.flagRun() : String.format("Task [%d] is running more than once!", prev.id);
+            prev.flagRunThrow();
             prev.runTask(g);
         }
         assert next.get(index).get() != null;
@@ -148,5 +153,14 @@ public class GuardTask {
 
     private boolean flagRun() {
         return timesRun.incrementAndGet() == 1;
+    }
+
+    private void flagRunThrow() {
+        if (timesRun.incrementAndGet() != 1) {
+            var bad = String.format("Task [%d] is running more than once!", this.id);
+            System.out.println(bad);
+            System.out.flush();
+            throw new Error(bad);
+        }
     }
 }
