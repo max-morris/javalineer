@@ -7,12 +7,12 @@ public class Var<T> implements Get<T>, Set<T> {
     Var(T t,Guard g) { data = t; this.g = g; }
 
     public void set(T t) {
-        assert Guard.has(g) : "The current thread does not have access to this Guard.";
+        assert Guard.has(g) : "The current thread does not have access to this Guard: "+g.name;
         data = t;
     }
 
     public T get() {
-        assert Guard.has(g) : "The current thread does not have access to this Guard.";
+        assert Guard.has(g) : "The current thread does not have access to this Guard: "+g.name;
         return data;
     }
 

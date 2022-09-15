@@ -15,6 +15,31 @@ import java.util.concurrent.atomic.AtomicReference;
  * @author sbrandt
  */
 public class Guard implements Comparable<Guard> {
+
+    final static boolean checkAssertions() {
+        try {
+            assert false;
+            return false;
+        } catch(AssertionError ae) {
+            return true;
+        }
+    }
+    final static boolean assertionsEnabled = checkAssertions();
+
+    public String getName() {
+        if(assertionsEnabled) {
+            Throwable t = new Throwable();
+            StackTraceElement[] se = t.getStackTrace();
+            String name = "Guard["+se[3]+"]";
+            if(name.indexOf("edu.lsu.cct.javalineer") >= 0)
+                name = "Guard["+se[3]+"]";
+            return name;
+        } else {
+            return "";
+        }
+    }
+
+    final String name = getName();
     static AtomicInteger idSeq = new AtomicInteger(0);
     public final int id = idSeq.getAndIncrement();
 
