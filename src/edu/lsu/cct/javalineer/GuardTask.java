@@ -33,8 +33,6 @@ public class GuardTask {
 
     public final static ThreadLocal<TreeSet<Guard>> GUARDS_HELD = new ThreadLocal<>();
 
-    private final AtomicInteger timesRun = new AtomicInteger(0);
-
     static void run(Runnable r,List<Guard> gset) {
         try {
             TreeSet<Guard> ts = new TreeSet<>();
@@ -63,30 +61,24 @@ public class GuardTask {
 
     public void run() {
         if(gset.size()==0) {
-            assert flagRun() : String.format("Task [%d] is running more than once!", id);
             run(r,gset);
             return;
         }
         Guard g = gset.get(index);
         GuardTask prev = g.task.getAndSet(this);
         if(prev == null) {
-            assert flagRun() : String.format("Task [%d] is running more than once!", id);
             runTask(g);
         } else {
             assert prev.next.size() == prev.gset.size();
             var nextt = prev.next.get(prev.index);
             assert nextt != null;
-            if(!nextt.compareAndSet(null,this)) {
-                assert flagRun() : String.format("Task [%d] is running more than once!", id);
+            if(!nextt.compareAndSet(null,this))
                 runTask(g);
-            }
             assert nextt.get() != null;
         }
     }
 
     public void runImmediately() {
-        assert flagRun() : String.format("Task [%d] is running more than once!", id);
-
         if(gset.size() == 0) {
             run(r, gset);
             return;
@@ -118,7 +110,6 @@ public class GuardTask {
         if (!next.get(index).compareAndSet(null, DONE)) {
             GuardTask prev = next.get(index).get();
             assert prev != DONE;
-            assert prev.flagRun() : String.format("Task [%d] is running more than once!", prev.id);
             prev.runTask(g);
         }
         assert next.get(index).get() != null;
@@ -144,9 +135,5 @@ public class GuardTask {
             assert index < gset.size();
             run();
         }
-    }
-
-    private boolean flagRun() {
-        return timesRun.incrementAndGet() == 1;
     }
 }
