@@ -11,8 +11,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.Map;
-import java.util.HashMap;
 
 /**
  *
@@ -60,17 +58,7 @@ public class GuardTask {
         for(Guard g : gset) {
             next.add(new AtomicReference<>());
         }
-        if(!(r instanceof RunOnce)) {
-            /*
-            Throwable t  = new Throwable("Run Once Init");
-            t.printStackTrace();
-            System.out.flush();
-            System.exit(2);
-            */
-            this.r = new RunOnce(r);
-        } else {
-            this.r = r;
-        }
+        this.r = r;
     }
 
     public void run() {
@@ -168,15 +156,11 @@ public class GuardTask {
     }
 
     private void flagRunThrow() {
-        /*
-        System.out.println("==>"+System.identityHashCode(r));
         if (timesRun.incrementAndGet() != 1) {
             var bad = String.format("Task [%d] is running more than once!", this.id);
-            Error e = new Error(bad);
-            e.printStackTrace();
+            System.out.println(bad);
             System.out.flush();
-            throw e;
+            throw new Error(bad);
         }
-        */
     }
 }
