@@ -43,10 +43,10 @@ public class GuardTask {
         } catch(Exception e) {
             e.printStackTrace();
             System.exit(1);
-        } catch(AssertionError e) {
+        } /*catch(AssertionError e) {
             e.printStackTrace();
             System.exit(2);
-        } finally {
+        }*/ finally {
             GUARDS_HELD.set(null);
         }
     }

@@ -91,7 +91,7 @@ public class MyPool implements Executor {
                     Runnable gt = rmTaskWait();
                     gt.run();
                 }
-            } catch (Throwable ex) {
+            } catch (/*Throwable*/ Exception ex) {
                 ex.printStackTrace();
                 System.exit(1);
             }
