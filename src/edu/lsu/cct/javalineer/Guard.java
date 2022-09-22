@@ -16,23 +16,14 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class Guard implements Comparable<Guard> {
 
-    final static boolean checkAssertions() {
-        try {
-            assert false;
-            return false;
-        } catch(AssertionError ae) {
-            return true;
-        }
-    }
-    final static boolean assertionsEnabled = checkAssertions();
-
     public String getName() {
-        if(assertionsEnabled) {
+        if(getClass().desiredAssertionStatus()) {
             Throwable t = new Throwable();
             StackTraceElement[] se = t.getStackTrace();
-            String name = "Guard["+se[3]+"]";
-            if(name.indexOf("edu.lsu.cct.javalineer") >= 0)
-                name = "Guard["+se[3]+"]";
+            int n = 2;
+            String name = ":Guard["+se[n]+"]";
+            while(name.indexOf("edu.lsu.cct.javalineer") >= 0)
+                name = ":Guard["+se[++n]+"]";
             return name;
         } else {
             return "";
@@ -48,7 +39,7 @@ public class Guard implements Comparable<Guard> {
     }
     
     public String toString() {
-        return "Guard("+id+")";
+        return "Guard("+id+":"+name+")";
     }
 
     public Guard getGuard() {
