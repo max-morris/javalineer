@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'java-library'
     id 'maven-publish'
+    id 'application'
 }
 
 group = 'edu.lsu.cct.javalineer'
@@ -43,6 +44,10 @@ publishing {
     }
 }
 
-dependencies {
+application {
+    mainClassName = "edu.lsu.cct.javalineer.flour.Flourineer"
+}
 
+dependencies {
+    implementation files("flourLib/flouri.jar")
 }

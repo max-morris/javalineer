@@ -1,0 +1,20 @@
+let g = Guard();
+let guardedInt = 0;
+
+g.runGuarded(void() {
+    println("Foo1 ${guardedInt}");
+    guardedInt = guardedInt + 3;
+    println("Foo2 ${guardedInt}");
+});
+
+g.runGuarded(void() {
+    println("Bar1 ${guardedInt}");
+    guardedInt = guardedInt + 1;
+    g.runGuarded(void() {
+        println("Baz1 ${guardedInt}");
+        guardedInt = guardedInt + 4;
+        println("Baz2 ${guardedInt}");
+    });
+    guardedInt = guardedInt + 1;
+    println("Bar2 ${guardedInt}");
+});
