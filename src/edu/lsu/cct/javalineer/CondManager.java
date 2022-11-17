@@ -1,22 +1,18 @@
 package edu.lsu.cct.javalineer;
 
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
-import java.util.TreeSet;
 
 
-public class CondMgr {
+public class CondManager {
     AtomicReference<CondLink> head = new AtomicReference<>(null);
 
     /**
      * Atomically append to the front of the list.
      */
     public void add(CondLink cl) {
-        while(true) {
+        while (true) {
             cl.next.set(head.get());
-            if(head.compareAndSet(cl.next.get(), cl))
+            if (head.compareAndSet(cl.next.get(), cl))
                 break;
         }
     }
@@ -28,11 +24,11 @@ public class CondMgr {
      */
     private CondLink getRef(AtomicReference<CondLink> ref) {
         CondLink r = null;
-        while(true) {
+        while (true) {
             r = ref.get();
-            if(r == null)
+            if (r == null)
                 return null;
-            if(r.cond.task.done) {
+            if (r.cond.task.done) {
                 // snip out completed task
                 CondLink r2 = r.next.get();
                 ref.compareAndSet(r, r2);
@@ -53,20 +49,20 @@ public class CondMgr {
     }
 
     private void signal(CondLink cl) {
-        if(cl != null) {
-            if(cl.cond == null) throw cl.err;
+        if (cl != null) {
+            if (cl.cond == null) throw cl.err;
             assert cl.cond.gset != null;
             final CondLink cf = cl;
             final CondTask task = cl.cond.task;
-            Guard.runGuarded(cl.cond.gset,()->{
-                if(task.done) {
+            Guard.runGuarded(() -> {
+                if (task.done) {
                     signal(getRef(cf.next));
                     return;
                 }
                 task.run();
-                if(!task.done)
+                if (!task.done)
                     signal(getRef(cf.next));
-            });
+            }, cl.cond.gset);
         }
     }
 
@@ -75,8 +71,8 @@ public class CondMgr {
      */
     public void signalAll() {
         CondLink cl = getRef(head);
-        while(cl != null) {
-            Guard.runGuarded(cl.cond.gset, cl.cond.task);
+        while (cl != null) {
+            Guard.runGuarded(cl.cond.task, cl.cond.gset);
             cl = getRef(cl.next);
         }
     }
