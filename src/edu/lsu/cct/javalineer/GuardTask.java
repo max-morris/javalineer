@@ -1,139 +1,91 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package edu.lsu.cct.javalineer;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.TreeSet;
+import java.util.Set;
 
-/**
- *
- * @author sbrandt
- */
 public class GuardTask {
-    static AtomicInteger idSeq = new AtomicInteger(0);
-    final int id = idSeq.getAndIncrement();
-    
-    public String toString() {
-        return "GuardTask("+id+")";
-    }
-    
-    public final static GuardTask DONE = new GuardTask(new TreeSet<>(),()->{});
-    final List<AtomicReference<GuardTask>> next = new ArrayList<>();
+    final static AtomicInteger nextId = new AtomicInteger(-1);
 
-    private final List<Guard> gset = new ArrayList<>();
-    private final Runnable r;
-    private volatile int index = 0;
+    final static GuardTask DONE = new GuardTask(null, () -> {
+        assert false : "DONE should not be executed";
+    }, null);
 
-    public final static ThreadLocal<TreeSet<Guard>> GUARDS_HELD = new ThreadLocal<>();
 
-    static void run(Runnable r,List<Guard> gset) {
-        try {
-            TreeSet<Guard> ts = new TreeSet<>();
-            ts.addAll(gset);
-            assert GUARDS_HELD.get() == null;
-            GUARDS_HELD.set(ts);
-            r.run();
-        } catch(Exception e) {
-            e.printStackTrace();
-            System.exit(1);
-        } /*catch(AssertionError e) {
-            e.printStackTrace();
-            System.exit(2);
-        }*/ finally {
-            GUARDS_HELD.set(null);
-        }
+    final static ThreadLocal<Set<Guard>> GUARDS_HELD = new ThreadLocal<>();
+
+    final int id = nextId.getAndIncrement();
+    final AtomicReference<GuardTask> next = new AtomicReference<>();
+    final Guard guard;
+    final TreeSet<Guard> guardsHeld;
+
+    private final boolean isDummyTask;
+    private Runnable r;
+
+    public GuardTask(Guard g, TreeSet<Guard> guardsHeld) {
+        this.guard = g;
+        this.isDummyTask = true;
+        this.guardsHeld = guardsHeld;
     }
 
-    GuardTask(TreeSet<Guard> gset, Runnable r) {
-        this.gset.addAll(gset);
-        for(Guard g : gset) {
-            next.add(new AtomicReference<>());
-        }
+    public GuardTask(Guard g, Runnable r, TreeSet<Guard> guardsHeld) {
+        this.guard = g;
+        this.isDummyTask = false;
+        this.r = r;
+        this.guardsHeld = guardsHeld;
+    }
+
+    public void setRun(Runnable r) {
+        assert this.r == null;
         this.r = r;
     }
 
+    private void run_() {
+        int id = ThreadID.get();
+        assert guard.locked.compareAndSet(false, true) : String.format("%s %d %d", this, ThreadID.get(), guardsHeld.size());
+        if (isUserTask()) {
+            GUARDS_HELD.set(guardsHeld);
+            for (Guard g : guardsHeld)
+                assert g.locked.get();
+        }
+        Run.run(r);
+    }
+
     public void run() {
-        if(gset.size()==0) {
-            run(r,gset);
-            return;
-        }
-        Guard g = gset.get(index);
-        GuardTask prev = g.task.getAndSet(this);
-        if(prev == null) {
-            runTask(g);
-        } else {
-            assert prev.next.size() == prev.gset.size();
-            var nextt = prev.next.get(prev.index);
-            assert nextt != null;
-            if(!nextt.compareAndSet(null,this))
-                runTask(g);
-            assert nextt.get() != null;
+        run_();
+        if (isUserTask())
+            free_();
+    }
+
+    public void free() {
+        assert isDummyTask : "Calling GuardTask.free() on a dummy task.";
+        free_();
+    }
+
+    private void free_() {
+        assert guard.locked.compareAndSet(true, false);
+        var n = next;
+        while (!n.compareAndSet(null, DONE)) {
+            final GuardTask gt = n.get();
+            gt.run_();
+            if (isUserTask()) {
+                return;
+            }
+            assert gt.guard.locked.compareAndSet(true, false);
+            n = gt.next;
         }
     }
 
-    public void runImmediately() {
-        if(gset.size() == 0) {
-            run(r, gset);
-            return;
-        }
-        Guard g = gset.get(index);
-        GuardTask prev = g.task.get();
-        if(prev == null) {
-            if (g.task.compareAndSet(null, this)) {
-                runTask(g);
-            } else {
-                runTask(null);
-            }
-        } else {
-            assert prev.next.size() == prev.gset.size();
-            var nextt = prev.next.get(prev.index);
-            assert nextt != null;
-            if (nextt.get() == null) {
-                runTask(null);
-            } else if (g.task.compareAndSet(prev, this)) {
-                runTask(g);
-            } else {
-                runTask(null);
-            }
-        }
-    }
-    
-    private void free() {
-        Guard g = gset.get(index);
-        if (!next.get(index).compareAndSet(null, DONE)) {
-            GuardTask prev = next.get(index).get();
-            assert prev != DONE;
-            prev.runTask(g);
-        }
-        assert next.get(index).get() != null;
-        if (index > 0) {
-            index--;
-            free();
-        }
+    public String toString() {
+        return "gt[" + id + "," + guard + "," + next + "]";
     }
 
-    private void runTask(Guard g) {
-        if(index + 1 == gset.size()) {
-            // Don't need to force async
-            Pool.run(()->{
-                if (g == null) {
-                    run(r, List.of());
-                } else {
-                    run(r, gset);
-                }
-                free();
-            });
-        } else {
-            index++;
-            assert index < gset.size();
-            run();
-        }
+    public boolean isUserTask() {
+        return !isDummyTask;
+    }
+
+    public boolean isDummyTask() {
+        return isDummyTask;
     }
 }
