@@ -5,7 +5,7 @@ import edu.lsu.cct.javalineer.GuardVar;
 import edu.lsu.cct.javalineer.Pool;
 
 public class TestRunNowVars {
-    public static void main(String[] args) {
+    public static void main(String[] args) {/*
         var g1 = new GuardVar<>("g1's data");
         var g2 = new GuardVar<>("g2's data");
 
@@ -27,6 +27,6 @@ public class TestRunNowVars {
             System.out.println(v2);
         });
 
-        Pool.await();
+        Pool.await();*/
     }
 }

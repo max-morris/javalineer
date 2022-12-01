@@ -1,6 +1,8 @@
 package edu.lsu.cct.javalineer.test;
 
 import edu.lsu.cct.javalineer.*;
+import edu.lsu.cct.javalineer.functionalinterfaces.CondCheck2;
+
 import java.util.*;
 
 class ProdCon {
@@ -68,10 +70,10 @@ class Segment {
     GuardVar< ProdCon> neighborLeft, neighborRight;
     public String toString() {
         return ""+id+"{"+
-            left.getGuard().id+","+
-            right.getGuard().id+","+
-            neighborLeft.getGuard().id+","+
-            neighborRight.getGuard().id+
+            left.toString()+","+
+            right.toString()+","+
+            neighborLeft.toString()+","+
+            neighborRight.toString()+
             "}";
     }
 

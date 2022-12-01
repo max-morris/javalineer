@@ -6,7 +6,7 @@ import edu.lsu.cct.javalineer.Pool;
 import java.util.TreeSet;
 
 public class TestRunNow {
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws InterruptedException {/*
         Guard g1 = new Guard();
         Guard g2 = new Guard();
 
@@ -52,6 +52,6 @@ public class TestRunNow {
             System.out.println("with g2 .. nowOrNever");
         });
 
-        Pool.await();
+        Pool.await();*/
     }
 }

@@ -1,6 +1,8 @@
 package edu.lsu.cct.javalineer.test;
 
 import edu.lsu.cct.javalineer.*;
+import edu.lsu.cct.javalineer.functionalinterfaces.CondCheck1;
+import edu.lsu.cct.javalineer.functionalinterfaces.GuardTask1;
 
 public class TestBank2 {
 

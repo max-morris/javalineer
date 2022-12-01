@@ -2,6 +2,8 @@ package edu.lsu.cct.javalineer.test;
 
 import java.util.*;
 import edu.lsu.cct.javalineer.*;
+import edu.lsu.cct.javalineer.functionalinterfaces.CondCheck3;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class March2 implements Runnable {
