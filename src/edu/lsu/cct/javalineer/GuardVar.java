@@ -31,6 +31,6 @@ public class GuardVar<T> extends Guard {
         }
 
         Runnable r = () -> vars.accept(result);
-        Guard.runGuarded(r, ts);
+        Guard.runGuarded(ts, r);
     }
 }
