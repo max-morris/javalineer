@@ -77,6 +77,10 @@ public class Guard implements Comparable<Guard> {
     }
 
     public static void runGuarded(TreeSet<Guard> ts, Runnable r) {
+        if(ts.size() == 1) {
+            runGuarded(ts.first(), r);
+            return;
+        }
         assert ts.size() > 1;
 
         List<Guard> lig = new ArrayList<>(ts);

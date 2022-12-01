@@ -69,7 +69,7 @@ public class GuardTask {
         while (!n.compareAndSet(null, DONE)) {
             final GuardTask gt = n.get();
             gt.run_();
-            if (isUserTask()) {
+            if (isDummyTask()) {
                 return;
             }
             assert gt.guard.locked.compareAndSet(true, false);
