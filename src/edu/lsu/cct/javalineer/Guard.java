@@ -176,6 +176,10 @@ public class Guard implements Comparable<Guard> {
         return ts.containsAll(guards);
     }
 
+    public int getId() {
+        return id;
+    }
+
     //region Generated
 
     public static <T1, T2> CompletableFuture<Void> runCondition(
