@@ -49,7 +49,7 @@ public class GuardTask {
             for (Guard g : guardsHeld)
                 assert g.locked.get();
         }
-        Run.run(r);
+        r.run();
     }
 
     public void run() {
