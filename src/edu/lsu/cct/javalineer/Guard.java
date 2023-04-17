@@ -67,7 +67,7 @@ public class Guard implements Comparable<Guard> {
     // Multiple guards
     public static void runGuarded(Runnable r, final Guard... guards) {
         if (guards.length == 0) {
-            Run.run(r);
+            r.run();
         } else if (guards.length == 1) {
             guards[0].runGuarded(r);
         } else {
@@ -102,7 +102,7 @@ public class Guard implements Comparable<Guard> {
         guardTasks.get(last - 1).setRun(() -> {
             // set up the last task
             lig.get(last).runGuarded_(guardsHeld, () -> {
-                Run.run(r);
+                r.run();
                 // last to run unlocks everything
                 for (int i = 0; i < last; i++) {
                     guardTasks.get(i).free();
