@@ -1,12 +1,13 @@
 package edu.lsu.cct.javalineer;
 
+import java.util.Collection;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Random;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
+import java.util.concurrent.*;
 import java.util.function.Supplier;
 
-public class MyPool implements Executor {
+public class MyPool implements ExecutorService {
     volatile int busy = 0;
 
     synchronized void incrBusy() {
@@ -37,6 +38,90 @@ public class MyPool implements Executor {
     }
 
     final static ThreadLocal<Integer> me = new ThreadLocal<>();
+
+    @Override
+    public void shutdown() {
+        throw new UnsupportedOperationException("MyPool does not support this operation");
+    }
+
+    @Override
+    public List<Runnable> shutdownNow() {
+        throw new UnsupportedOperationException("MyPool does not support this operation");
+    }
+
+    @Override
+    public boolean isShutdown() {
+        return false;
+    }
+
+    @Override
+    public boolean isTerminated() {
+        return false;
+    }
+
+    @Override
+    public boolean awaitTermination(long l, TimeUnit timeUnit) {
+        throw new UnsupportedOperationException("MyPool does not support this operation");
+    }
+
+    @Override
+    public <T> Future<T> submit(Callable<T> callable) {
+        var cf = new CompletableFuture<T>();
+
+        this.execute(() -> {
+            try {
+                cf.complete(callable.call());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        return cf;
+    }
+
+    @Override
+    public <T> Future<T> submit(Runnable runnable, T t) {
+        var cf = new CompletableFuture<T>();
+
+        this.execute(() -> {
+            runnable.run();
+            cf.complete(t);
+        });
+
+        return cf;
+    }
+
+    @Override
+    public Future<?> submit(Runnable runnable) {
+        var cf = new CompletableFuture<Void>();
+
+        this.execute(() -> {
+            runnable.run();
+            cf.complete(null);
+        });
+
+        return cf;
+    }
+
+    @Override
+    public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> collection) throws InterruptedException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> collection, long l, TimeUnit timeUnit) throws InterruptedException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public <T> T invokeAny(Collection<? extends Callable<T>> collection) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public <T> T invokeAny(Collection<? extends Callable<T>> collection, long l, TimeUnit timeUnit) {
+        throw new UnsupportedOperationException();
+    }
 
     class Worker extends Thread {
         final int id;
