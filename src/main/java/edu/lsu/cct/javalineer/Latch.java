@@ -20,4 +20,8 @@ public class Latch<T> {
     public final CompletableFuture<?> getFut() {
         return fut;
     }
+
+    public final void join() {
+        fut.join();
+    }
 }

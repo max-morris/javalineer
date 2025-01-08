@@ -4,6 +4,8 @@ import edu.lsu.cct.javalineer.*;
 import edu.lsu.cct.javalineer.functionalinterfaces.CondCheck1;
 import edu.lsu.cct.javalineer.functionalinterfaces.GuardTask1;
 
+import java.util.concurrent.CompletableFuture;
+
 public class TestBank2 {
 
     static class Bank extends Guarded {
@@ -26,13 +28,20 @@ public class TestBank2 {
     public static void main(String[] args) {
         Test.requireAssert();
 
+        var doneLatch = new CountdownLatch(2000);
+
         GuardVar<Bank> a = new GuardVar<>(new Bank());
 
         for(int i=0;i<1000;i++) {
             Pool.run(()->{
                 Guard.runCondition(a,new CondCheck1<>() {
                     public boolean check(Var<Bank> bank) {
-                        return bank.get().withdraw(1);
+                        if (bank.get().withdraw(1)) {
+                            doneLatch.signal();
+                            return true;
+                        } else {
+                            return false;
+                        }
                     }
                 });
             });
@@ -41,20 +50,22 @@ public class TestBank2 {
                     public void run(Var<Bank> bank) {
                         bank.get().deposit(1);
                         bank.get().getGuard().signal();
+                        doneLatch.signal();
                     }
                 });
             });
         }
 
-        Pool.await();
+        doneLatch.join();
         int[] out = new int[1];
 
+        var done = new CompletableFuture<Void>();
         a.runGuarded((bank)->{
             out[0] = bank.get().balance;
             assert out[0] == 0;
+            done.complete(null);
         });
 
-        Pool.await();
-
+        done.join();
     }
 }

@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'java-library'
     id 'maven-publish'
+    id 'idea'
 }
 
 group = 'edu.lsu.cct.javalineer'
@@ -11,15 +12,9 @@ repositories {
 }
 
 sourceSets {
-    main {
-        java {
-            srcDir 'src'
-            exclude 'edu/lsu/cct/javalineer/test/**'
-        }    
-    }
     tests {
         java {
-            srcDir 'src'
+            srcDir 'src/tests/java'
         }
     }
 }
@@ -49,5 +44,5 @@ publishing {
 }
 
 dependencies {
-
+    testsImplementation sourceSets.main.output
 }
