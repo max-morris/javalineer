@@ -1,13 +1,10 @@
 package edu.lsu.cct.javalineer;
 
-import java.util.Collection;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Random;
 import java.util.concurrent.*;
-import java.util.function.Supplier;
 
-public class MyPool implements ExecutorService {
+public class MyPool implements Executor {
     volatile int busy = 0;
 
     synchronized void incrBusy() {
@@ -25,6 +22,7 @@ public class MyPool implements ExecutorService {
         awaitQuiet();
         return true;
     }
+
     synchronized void awaitQuiet() {
         while (busy > 0) {
             try {
@@ -32,96 +30,12 @@ public class MyPool implements ExecutorService {
             } catch (InterruptedException ioe) {
             }
         }
-        for(Worker w : workers) {
-            assert w.ll.size()==0;
+        for (Worker w : workers) {
+            assert w.ll.size() == 0;
         }
     }
 
     final static ThreadLocal<Integer> me = new ThreadLocal<>();
-
-    @Override
-    public void shutdown() {
-        throw new UnsupportedOperationException("MyPool does not support this operation");
-    }
-
-    @Override
-    public List<Runnable> shutdownNow() {
-        throw new UnsupportedOperationException("MyPool does not support this operation");
-    }
-
-    @Override
-    public boolean isShutdown() {
-        return false;
-    }
-
-    @Override
-    public boolean isTerminated() {
-        return false;
-    }
-
-    @Override
-    public boolean awaitTermination(long l, TimeUnit timeUnit) {
-        throw new UnsupportedOperationException("MyPool does not support this operation");
-    }
-
-    @Override
-    public <T> Future<T> submit(Callable<T> callable) {
-        var cf = new CompletableFuture<T>();
-
-        this.execute(() -> {
-            try {
-                cf.complete(callable.call());
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
-
-        return cf;
-    }
-
-    @Override
-    public <T> Future<T> submit(Runnable runnable, T t) {
-        var cf = new CompletableFuture<T>();
-
-        this.execute(() -> {
-            runnable.run();
-            cf.complete(t);
-        });
-
-        return cf;
-    }
-
-    @Override
-    public Future<?> submit(Runnable runnable) {
-        var cf = new CompletableFuture<Void>();
-
-        this.execute(() -> {
-            runnable.run();
-            cf.complete(null);
-        });
-
-        return cf;
-    }
-
-    @Override
-    public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> collection) throws InterruptedException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> collection, long l, TimeUnit timeUnit) throws InterruptedException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public <T> T invokeAny(Collection<? extends Callable<T>> collection) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public <T> T invokeAny(Collection<? extends Callable<T>> collection, long l, TimeUnit timeUnit) {
-        throw new UnsupportedOperationException();
-    }
 
     class Worker extends Thread {
         final int id;
@@ -129,7 +43,9 @@ public class MyPool implements ExecutorService {
         Worker(final int id) {
             this.id = id;
             incrBusy();
-            ll.add(()->{ me.set(id); });
+            ll.add(() -> {
+                me.set(id);
+            });
         }
 
         LinkedList<Runnable> ll = new LinkedList<>();
@@ -137,7 +53,7 @@ public class MyPool implements ExecutorService {
         synchronized void addTask(Runnable t) {
             ll.addLast(t);
             // This worker just became busy
-            if(ll.size() == 1) {
+            if (ll.size() == 1) {
                 incrBusy();
                 // this worker now has tasks...
                 notifyAll();
@@ -153,12 +69,13 @@ public class MyPool implements ExecutorService {
             }
             return rmTask();
         }
+
         synchronized Runnable rmTask() {
-            if(ll.size() == 0)
+            if (ll.size() == 0)
                 return null;
             Runnable gt = ll.removeFirst();
-            if(ll.size() == 0) {
-                return ()->{
+            if (ll.size() == 0) {
+                return () -> {
                     try {
                         gt.run();
                     } finally {
@@ -184,7 +101,7 @@ public class MyPool implements ExecutorService {
 
         public boolean runOne() {
             Runnable run = rmTask();
-            if(run != null) {
+            if (run != null) {
                 run.run();
                 return true;
             } else {
@@ -203,10 +120,13 @@ public class MyPool implements ExecutorService {
         workers[n].addTask(gt);
     }
 
-    public int getParallelism() { return size; }
+    public int getParallelism() {
+        return size;
+    }
 
     final int size;
     Worker[] workers;
+
     public MyPool(int size) {
         this.size = size;
         workers = new Worker[size];
@@ -223,12 +143,12 @@ public class MyPool implements ExecutorService {
 
         Integer meId = me.get();
         // We might not be on a worker thread...
-        if(meId == null) 
+        if (meId == null)
             meId = RAND.nextInt(workers.length);
 
-        for(int i=0;i<size;i++) {
-            int id = (meId+i) % size;
-            if(workers[id].runOne())
+        for (int i = 0; i < size; i++) {
+            int id = (meId + i) % size;
+            if (workers[id].runOne())
                 return true;
         }
         return false;
@@ -239,12 +159,7 @@ public class MyPool implements ExecutorService {
         add(command);
     }
 
-    public <T> CompletableFuture<T> supply(Supplier<CompletableFuture<T>> supplier) {
-        return CompletableFuture.completedFuture(null)
-                                .thenComposeAsync(x -> supplier.get(), this);
-    }
-
     public String toString() {
-        return "MyPool("+size+")";
+        return "MyPool(" + size + ")";
     }
 }

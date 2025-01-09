@@ -24,7 +24,7 @@ public class TestFib {
             return CompletableFuture.completedFuture(fib_sync(n));
 
         CompletableFuture<Integer> f1 = CompletableFuture.completedFuture(n - 1)
-                                                         .thenComposeAsync(TestFib::fib, Pool.getExecutor());
+                                                         .thenComposeAsync(TestFib::fib, Pool.getPool());
         CompletableFuture<Integer> f2 = fib(n - 2);
 
         return f1.thenCombine(f2, Integer::sum);
