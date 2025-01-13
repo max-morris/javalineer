@@ -145,6 +145,10 @@ public class Guard implements Comparable<Guard> {
         return cond.task.fut;
     }
 
+    public static CompletableFuture<Void> runCondition(final TreeSet<Guard> ts, final CondCheck0 c) {
+        return Guard.runCondition(ts, new CondTask0(c));
+    }
+
     public static <T> CompletableFuture<Void> runCondition(GuardVar<T> gv, final CondCheck1<T> c) {
         return Guard.runCondition(gv,new CondTask1<T>(c));
     }
