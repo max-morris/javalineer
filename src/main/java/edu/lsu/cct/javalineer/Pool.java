@@ -10,8 +10,24 @@ public class Pool {
         return thePool;
     }
 
+    /**
+     * Sets the pool used by Javalineer. This method is only intended for use when nothing is running, and
+     * therefore makes no attempt to be thread-safe. If the previous pool is an ExecutorService, shutdown()
+     * is called on it.
+     * @param newPool The new pool.
+     */
     public static void setPool(Executor newPool) {
-        if (thePool instanceof ExecutorService) {
+        setPool(newPool, true);
+    }
+
+    /**
+     * Sets the pool used by Javalineer. This method is only intended for use when nothing is running, and
+     * therefore makes no attempt to be thread-safe.
+     * @param newPool The new pool.
+     * @param shutdownOld If true, will call shutdown() on the old pool if it is an ExecutorService.
+     */
+    public static void setPool(Executor newPool, boolean shutdownOld) {
+        if (shutdownOld && thePool instanceof ExecutorService) {
             ((ExecutorService) thePool).shutdown();
         }
         thePool = newPool;
