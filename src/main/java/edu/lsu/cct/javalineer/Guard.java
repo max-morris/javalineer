@@ -102,13 +102,11 @@ public class Guard implements Comparable<Guard> {
         guardTasks.get(last - 1).setRun(() -> {
             // set up the last task
             lig.get(last).runGuarded_(guardsHeld, () -> {
-                // asynchronously run the job & unlock everything
-                Pool.run(() -> {
-                    r.run();
-                    for (int i = 0; i < last; i++) {
-                        guardTasks.get(i).free();
-                    }
-                });
+                r.run();
+                // last to run unlocks everything
+                for (int i = 0; i < last; i++) {
+                    guardTasks.get(i).free();
+                }
             });
         });
 
