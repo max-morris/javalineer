@@ -2,8 +2,6 @@ package edu.lsu.cct.javalineer;
 
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.TreeSet;
-import java.util.Set;
 
 public class GuardTask {
     final static AtomicInteger nextId = new AtomicInteger(-1);
@@ -13,23 +11,23 @@ public class GuardTask {
     }, null);
 
 
-    final static ThreadLocal<Set<Guard>> GUARDS_HELD = new ThreadLocal<>();
+    final static ThreadLocal<GuardSet> GUARDS_HELD = new ThreadLocal<>();
 
     final int id = nextId.getAndIncrement();
     final AtomicReference<GuardTask> next = new AtomicReference<>();
     final Guard guard;
-    final TreeSet<Guard> guardsHeld;
+    final GuardSet guardsHeld;
 
     private final boolean isDummyTask;
     private Runnable r;
 
-    public GuardTask(Guard g, TreeSet<Guard> guardsHeld) {
+    public GuardTask(Guard g, GuardSet guardsHeld) {
         this.guard = g;
         this.isDummyTask = true;
         this.guardsHeld = guardsHeld;
     }
 
-    public GuardTask(Guard g, Runnable r, TreeSet<Guard> guardsHeld) {
+    public GuardTask(Guard g, Runnable r, GuardSet guardsHeld) {
         this.guard = g;
         this.isDummyTask = false;
         this.r = r;
