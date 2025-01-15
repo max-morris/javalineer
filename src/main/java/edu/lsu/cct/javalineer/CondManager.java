@@ -51,10 +51,10 @@ public class CondManager {
     private void signal(CondLink cl) {
         if (cl != null) {
             if (cl.cond == null) throw cl.err;
-            assert cl.cond.gset != null;
+            assert cl.cond.gSet != null;
             final CondLink cf = cl;
             final CondTask task = cl.cond.task;
-            Guard.runGuarded(cl.cond.gset, () -> {
+            Guard.runGuarded(cl.cond.gSet, () -> {
                 if (task.done) {
                     signal(getRef(cf.next));
                     return;
@@ -72,7 +72,7 @@ public class CondManager {
     public void signalAll() {
         CondLink cl = getRef(head);
         while (cl != null) {
-            Guard.runGuarded(cl.cond.gset, cl.cond.task);
+            Guard.runGuarded(cl.cond.gSet, cl.cond.task);
             cl = getRef(cl.next);
         }
     }

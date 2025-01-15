@@ -23,9 +23,7 @@ public class TestGuard {
         Test.requireAssert();
         Guard g1 = new Guard();
         Guard g2 = new Guard();
-        TreeSet<Guard> ts = new TreeSet<>();
-        ts.add(g1);
-        ts.add(g2);
+        GuardSet gs = GuardSet.of(g1, g2);
 
         var doneLatch = new CountdownLatch(N_TASK * 3);
 
@@ -38,7 +36,7 @@ public class TestGuard {
                 incrC2();
                 doneLatch.signal();
             });
-            Guard.runGuarded(ts, () -> {
+            Guard.runGuarded(gs, () -> {
                 incrC1();
                 incrC2();
                 doneLatch.signal();
