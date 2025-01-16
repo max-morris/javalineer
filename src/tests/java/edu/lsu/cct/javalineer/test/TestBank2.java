@@ -13,7 +13,7 @@ public class TestBank2 {
 
         boolean withdraw(int a) {
             assert a > 0;
-            if(a > balance)
+            if (a > balance)
                 return false;
             balance -= a;
             return true;
@@ -31,27 +31,24 @@ public class TestBank2 {
         var doneLatch = new CountdownLatch(2000);
 
         GuardVar<Bank> a = new GuardVar<>(new Bank());
+        var bankNotEmpty = Guard.newCondition(a);
 
-        for(int i=0;i<1000;i++) {
-            Pool.run(()->{
-                Guard.runCondition(a,new CondCheck1<>() {
-                    public boolean check(Var<Bank> bank) {
-                        if (bank.get().withdraw(1)) {
-                            doneLatch.signal();
-                            return true;
-                        } else {
-                            return false;
-                        }
+        for (int i = 0; i < 1000; i++) {
+            Pool.run(() -> {
+                Guard.runCondition(bankNotEmpty, bank -> {
+                    if (bank.get().withdraw(1)) {
+                        doneLatch.signal();
+                        return true;
+                    } else {
+                        return false;
                     }
                 });
             });
-            Pool.run(()->{
-                Guard.runGuarded(a,new GuardTask1<Bank>() {
-                    public void run(Var<Bank> bank) {
-                        bank.get().deposit(1);
-                        bank.get().getGuard().signal();
-                        doneLatch.signal();
-                    }
+            Pool.run(() -> {
+                Guard.runGuarded(a, bank -> {
+                    bank.get().deposit(1);
+                    bankNotEmpty.signal();
+                    doneLatch.signal();
                 });
             });
         }
@@ -60,7 +57,7 @@ public class TestBank2 {
         int[] out = new int[1];
 
         var done = new CompletableFuture<Void>();
-        a.runGuarded((bank)->{
+        a.runGuarded((bank) -> {
             out[0] = bank.get().balance;
             assert out[0] == 0;
             done.complete(null);

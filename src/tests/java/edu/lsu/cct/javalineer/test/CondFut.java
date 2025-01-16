@@ -10,14 +10,15 @@ public class CondFut {
         Test.requireAssert();
 
         var done = new CompletableFuture<>();
-        GuardVar<Integer> counter = new GuardVar<>(0); // 0
+        var counter = new GuardVar<>(0); // 0
+        var cond = Guard.newCondition(counter);
 
-        var f = Guard.runCondition(counter, (v) -> {
+        var f = Guard.runCondition(cond, (v) -> {
             v.set(v.get() + 1);
             return v.get() == 2;
         }); // 1
 
-        counter.signal(); // 2
+        cond.signal(); // 2
 
         f.thenRun(() -> {
             counter.runGuarded((v) -> {

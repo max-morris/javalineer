@@ -33,10 +33,13 @@ public class TestBank3 {
         GuardVar<Bank> a = new GuardVar<>(new Bank());
         GuardVar<Bank> b = new GuardVar<>(new Bank());
 
+        var aNotEmpty = Guard.newCondition(a);
+        var bNotEmpty = Guard.newCondition(a, b);
+
         for (int i = 0; i < 1000; i++) {
             Pool.run(() -> {
-                Guard.runCondition(a, (Var<Bank> bank) -> {
-                    boolean b2 = bank.get().withdraw(1);
+                Guard.runCondition(aNotEmpty, (Var<Bank> bankA) -> {
+                    boolean b2 = bankA.get().withdraw(1);
                     if (b2) {
                         wc.getAndIncrement();
                         doneLatch.signal();
@@ -45,10 +48,10 @@ public class TestBank3 {
                 });
             });
             Pool.run(() -> {
-                Guard.runCondition(a, b, (Var<Bank> banka, Var<Bank> bankb) -> {
-                    if (bankb.get().withdraw(1)) {
-                        banka.get().deposit(1);
-                        banka.signal();
+                Guard.runCondition(bNotEmpty, (Var<Bank> bankA, Var<Bank> bankB) -> {
+                    if (bankB.get().withdraw(1)) {
+                        bankA.get().deposit(1);
+                        aNotEmpty.signal();
                         tc.getAndIncrement();
                         doneLatch.signal();
                         return true;
@@ -58,9 +61,9 @@ public class TestBank3 {
                 });
             });
             Pool.run(() -> {
-                Guard.runGuarded(b, (Var<Bank> bank) -> {
-                    bank.get().deposit(1);
-                    bank.signal();
+                Guard.runGuarded(b, (Var<Bank> bankB) -> {
+                    bankB.get().deposit(1);
+                    bNotEmpty.signal();
                     dc.getAndIncrement();
                     doneLatch.signal();
                 });

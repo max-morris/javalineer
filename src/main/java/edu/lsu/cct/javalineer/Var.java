@@ -16,14 +16,6 @@ public class Var<T> implements Get<T>, Set<T> {
         return data;
     }
 
-    public void signal() {
-        g.signal();
-    }
-
-    public void signalAll() {
-        g.signalAll();
-    }
-
     @SuppressWarnings("unchecked")
     public GuardVar<T> guardVar() {
         return (GuardVar)g;
