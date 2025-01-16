@@ -51,38 +51,29 @@ public final class CondContext<T extends CondTask> {
     }
 
     public void signal() {
-        signal(new CompletableFuture<>());
-    }
-
-    private CompletableFuture<Void> signal(CompletableFuture<Void> done) {
-        deq().thenAccept(task -> {
-            if (task != null) {
-                Guard.runGuarded(gSet, () -> {
-                    task.run();
+        snapshot().thenAccept(tasks -> {
+            Guard.runGuarded(gSet, () -> {
+                for (var task : tasks) {
                     if (!task.done) {
-                        signal(done).thenAccept(unused -> {
-                            enq(task);
-                        });
-                    } else {
-                        done.complete(null);
+                        task.run();
+                        if (task.done) {
+                            break;
+                        }
                     }
-                });
-            } else {
-                done.complete(null);
-            }
+                }
+            });
         });
-
-        return done;
     }
 
     public void signalAll() {
-        drain().thenAccept(tasks -> {
-            for (var task : tasks) {
-                task.run();
-                if (!task.done) {
-                    enq(task);
+        snapshot().thenAccept(tasks -> {
+            Guard.runGuarded(gSet, () -> {
+                for (var task : tasks) {
+                    if (!task.done) {
+                        task.run();
+                    }
                 }
-            }
+            });
         });
     }
 
@@ -92,28 +83,21 @@ public final class CondContext<T extends CondTask> {
         });
     }
 
-    private CompletableFuture<T> deq() {
-        var taskFut = new CompletableFuture<T>();
-
-        tasks.runGuarded(tasksVar -> {
-            var tasks = tasksVar.get();
-            if (tasks.isEmpty()) {
-                taskFut.complete(null);
-            } else {
-                taskFut.complete(tasks.remove(0));
-            }
-        });
-
-        return taskFut;
-    }
-
-    private CompletableFuture<List<T>> drain() {
+    private CompletableFuture<List<T>> snapshot() {
         var tasksFut = new CompletableFuture<List<T>>();
 
         tasks.runGuarded(tasksVar -> {
             var tasks = tasksVar.get();
-            tasksVar.set(new ArrayList<>());
-            tasksFut.complete(tasks);
+            var taskList = new ArrayList<T>(tasks.size());
+
+            for (var task : tasks) {
+                if (!task.done) {
+                    taskList.add(task);
+                }
+            }
+
+            tasksVar.set(taskList);
+            tasksFut.complete(taskList);
         });
 
         return tasksFut;
