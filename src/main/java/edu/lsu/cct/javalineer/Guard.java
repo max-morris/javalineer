@@ -92,7 +92,7 @@ public class Guard implements Comparable<Guard> {
                 r.run();
                 // last to run unlocks everything
                 for (int i = 0; i < last; i++) {
-                    guardTasks.get(i).free();
+                    guardTasks.get(i).free(i < last - 1);
                 }
             });
         });

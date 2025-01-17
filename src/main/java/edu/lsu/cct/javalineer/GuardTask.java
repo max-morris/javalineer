@@ -57,9 +57,17 @@ public class GuardTask {
             free_();
     }
 
-    public void free() {
+    void free() {
+        free(false);
+    }
+
+    void free(boolean forcePool) {
         assert isDummyTask : "Calling GuardTask.free() on a dummy task.";
-        free_();
+        if (forcePool) {
+            Pool.run(this::free_);
+        } else {
+            free_();
+        }
     }
 
     private void free_() {
