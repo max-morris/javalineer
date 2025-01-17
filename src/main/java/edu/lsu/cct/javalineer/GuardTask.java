@@ -41,7 +41,8 @@ public class GuardTask {
 
     private void run_() {
         int id = ThreadID.get();
-        assert guard.locked.compareAndSet(false, true) : String.format("%s %d %d", this, ThreadID.get(), guardsHeld.size());
+        var ok = guard.locked.compareAndSet(false, true);
+        assert ok : String.format("%s %d %d", this, ThreadID.get(), guardsHeld.size());
         if (isUserTask()) {
             GUARDS_HELD.set(guardsHeld);
             for (Guard g : guardsHeld)
@@ -62,7 +63,8 @@ public class GuardTask {
     }
 
     private void free_() {
-        assert guard.locked.compareAndSet(true, false);
+        var ok = guard.locked.compareAndSet(true, false);
+        assert ok;
         var n = next;
         while (!n.compareAndSet(null, DONE)) {
             final GuardTask gt = n.get();
@@ -70,7 +72,8 @@ public class GuardTask {
             if (gt.isDummyTask()) {
                 return;
             }
-            assert gt.guard.locked.compareAndSet(true, false);
+            ok = gt.guard.locked.compareAndSet(true, false);
+            assert ok;
             n = gt.next;
         }
     }

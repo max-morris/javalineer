@@ -206,7 +206,6 @@ public class Guard implements Comparable<Guard> {
         Guard.runGuarded(held.union(GuardSet.of(gv1, gv2)), () -> c.run(gv1.var, gv2.var));
     }
 
-
     public static <T1, T2, T3> CondContext<CondTask3<T1, T2, T3>> newCondition(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
