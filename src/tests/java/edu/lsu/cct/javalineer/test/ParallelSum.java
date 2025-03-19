@@ -9,7 +9,7 @@ import java.util.stream.IntStream;
 
 public class ParallelSum {
     public static void main(String[] args) {
-        final var n = 100_000_000;
+        final var n = 1_000_000_000;
         final var rand = new Random();
 
         var addends = IntStream.range(0, n)
@@ -26,7 +26,7 @@ public class ParallelSum {
         serialTime = System.currentTimeMillis() - serialTime;
 
         var parallelTime = System.currentTimeMillis();
-        int parallelSum = pAddends.reducePartitioned(8, lv -> {
+        int parallelSum = pAddends.reducePartitioned(6, lv -> {
             int sum = 0;
             for (int i = 0; i < lv.size(); i++) {
                 sum += lv.get(i);

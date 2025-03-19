@@ -22,6 +22,12 @@ public class PartitionableList<E> {
         this(new ArrayList<>());
     }
 
+    public final static int partIndex(int part, int numParts, int size) {
+        int N = size / numParts;
+        int R = size % numParts;
+        return N*part + Math.min(part,R);
+    }
+
     public CompletableFuture<Void> runPartitioned(int nChunks,
                                                   Function<ListView<E>, CompletableFuture<Void>> chunkTask) {
         var done = new CompletableFuture<Void>();
@@ -34,23 +40,23 @@ public class PartitionableList<E> {
             busyVar.set(true);
 
             final var dataSize = data.size();
-            final var chunkSize = dataSize / nChunks;
-            final var remainderSize = dataSize % nChunks;
 
             final var tasksDone = new CountdownLatch(nChunks);
 
-            for (int i = 0; i < nChunks - 1; i++) {
-                final var chunkN = i;
+            for (int i = 0; i < nChunks-1; i++) {
+                final var lo = partIndex(i, nChunks, dataSize);
+                final var hi = partIndex(i+1, nChunks, dataSize);
+                final var chunkSize = hi - lo;
                 Pool.run(() -> {
-                    final var view = new ListView<>(data, chunkN * chunkSize, chunkSize);
+                    final var view = new ListView<>(data, lo, chunkSize);
                     chunkTask.apply(view).thenRun(tasksDone::signal);
                 });
             }
-
-            Pool.run(() -> {
-                final var view = new ListView<>(data, (nChunks - 1) * chunkSize, remainderSize == 0 ? chunkSize : remainderSize);
-                chunkTask.apply(view).thenRun(tasksDone::signal);
-            });
+            final var lo = partIndex(nChunks-1, nChunks, dataSize);
+            final var hi = partIndex(nChunks, nChunks, dataSize);
+            final var chunkSize = hi - lo;
+            final var view = new ListView<>(data, lo, chunkSize);
+            chunkTask.apply(view).thenRun(tasksDone::signal);
 
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
@@ -78,8 +84,6 @@ public class PartitionableList<E> {
             busyVar.set(true);
 
             final var dataSize = data.size();
-            final var chunkSize = dataSize / nChunks;
-            final var remainderSize = dataSize % nChunks;
 
             final var tasksDone = new CountdownLatch(nChunks);
 
@@ -87,9 +91,11 @@ public class PartitionableList<E> {
             final var intermediateGuard = new Guard();
 
             for (int i = 0; i < nChunks - 1; i++) {
-                final var chunkN = i;
+                final var lo = partIndex(i, nChunks, dataSize);
+                final var hi = partIndex(i+1, nChunks, dataSize);
+                final var chunkSize = hi - lo;
                 Pool.run(() -> {
-                    final var view = new ListView<>(data, chunkN * chunkSize, chunkSize);
+                    final var view = new ListView<>(data, lo, chunkSize);
                     chunkTask.apply(view).thenAccept(res -> {
                         Guard.runGuarded(intermediateGuard, () -> {
                             intermediateList.add(res);
@@ -99,13 +105,14 @@ public class PartitionableList<E> {
                 });
             }
 
-            Pool.run(() -> {
-                final var view = new ListView<>(data, (nChunks - 1) * chunkSize, remainderSize == 0 ? chunkSize : remainderSize);
-                chunkTask.apply(view).thenAccept(res -> {
-                    Guard.runGuarded(intermediateGuard, () -> {
-                        intermediateList.add(res);
-                        tasksDone.signal();
-                    });
+            final var lo = partIndex(nChunks - 1, nChunks, dataSize);
+            final var hi = partIndex(nChunks, nChunks, dataSize);
+            final var chunkSize = hi - lo;
+            final var viewLast = new ListView<>(data, lo, chunkSize);
+            chunkTask.apply(viewLast).thenAccept(res -> {
+                Guard.runGuarded(intermediateGuard, () -> {
+                    intermediateList.add(res);
+                    tasksDone.signal();
                 });
             });
 
