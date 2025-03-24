@@ -13,10 +13,24 @@ public class ListView<E> implements Iterable<E> {
         this.size = size;
     }
 
+    public static <E> ListView<E> newChecked(List<E> underlying, int offset, int size) {
+        if (offset < 0 || offset + size > underlying.size()) {
+            throw new IndexOutOfBoundsException(String.format("offset: %d, size: %d, underlying size: %d", offset, size, underlying.size()));
+        }
+        return new ListView<>(underlying, offset, size);
+    }
+
     public ListView(ListView<E> other, int offset, int size) {
         this.underlying = other.underlying;
         this.offset = other.offset + offset;
         this.size = size;
+    }
+
+    public static <E> ListView<E> newChecked(ListView<E> other, int offset, int size) {
+        if (offset < 0 || offset + size > other.size()) {
+            throw new IndexOutOfBoundsException(String.format("offset: %d, size: %d, underlying size: %d", offset, size, other.size()));
+        }
+        return new ListView<>(other, offset, size);
     }
 
     public E getUnchecked(int i) {
