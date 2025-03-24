@@ -13,6 +13,12 @@ public class ListView<E> implements Iterable<E> {
         this.size = size;
     }
 
+    public ListView(ListView<E> other, int offset, int size) {
+        this.underlying = other.underlying;
+        this.offset = other.offset + offset;
+        this.size = size;
+    }
+
     public E getUnchecked(int i) {
         return underlying.get(offset + i);
     }
