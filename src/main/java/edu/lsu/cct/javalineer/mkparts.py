@@ -38,7 +38,7 @@ for i in range(1,6):
         for j in range(1,i+1):
             if j == i:
                 end = ") {"
-                endp = "> chunkTask,"
+                endp = "," #"> chunkTask,"
             else:
                 end = ", "
                 endp = ","
@@ -48,11 +48,13 @@ for i in range(1,6):
                                                                 {rw}PartListView<T{j}>{endp}"""
             intents += f"""
                                                              {rw}PartIntent<T{j}> pi{j}{end}"""
+        partlists += f"""
+                                                                CompletableFuture<Void>> chunkTask,"""
         template = f"""
 public static {tlist} CompletableFuture<Void> runPartitioned(int nChunks,
                                                              PartTask{i}<{partlists}"""
         template += intents
-        plist = ", ".join(["p"+str(j) for j in range(1,i+1)])
+        plist = ", ".join(["pi"+str(j) for j in range(1,i+1)])
         template += f"""
     return runPartitioned(nChunks, 0, {plist});
 }}"""
