@@ -29,7 +29,7 @@ def mkbody(n,p=1,nindent=0):
 
 count = 0
 
-for i in range(1,6):
+for i in range(2,6):
     tlist = "<"+(", ".join(["T"+str(j) for j in range(1,i+1)]))+">"
     read_list = [0 for j in range(i)]
     while True:
@@ -56,7 +56,7 @@ public static {tlist} CompletableFuture<Void> runPartitioned(int nChunks,
         template += intents
         plist = ", ".join(["pi"+str(j) for j in range(1,i+1)])
         template += f"""
-    return runPartitioned(nChunks, 0, {plist});
+    return runPartitioned(nChunks, 0, chunkTask, {plist});
 }}"""
         print(template)
         #====================

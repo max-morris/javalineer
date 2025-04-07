@@ -3,44 +3,48 @@ package edu.lsu.cct.javalineer;
 import java.util.Iterator;
 import java.util.List;
 
-public class ListView<E> implements Iterable<E> {
-    private final List<E> underlying;
-    private final int offset, size;
-
-    public ListView(List<E> underlying, int offset, int size) {
-        this.underlying = underlying;
-        this.offset = offset;
-        this.size = size;
+public class ReadWritePartListView<E> extends PartListView<E> implements ReadWriteView<E> {
+    public ReadWritePartListView(List<E> underlying, int offset, int size, int ghostSize) {
+        super(underlying, offset, size, ghostSize);
     }
 
-    public static <E> ListView<E> newChecked(List<E> underlying, int offset, int size) {
+    public ReadWritePartListView(List<E> underlying, int offset, int size) {
+        super(underlying, offset, size);
+    }
+
+    public ReadWritePartListView(ReadWritePartListView<E> other, int offset, int size, int ghostSize) {
+        super(other, offset, size, ghostSize);
+    }
+
+    public ReadWritePartListView(ReadWritePartListView<E> other, int offset, int size) {
+        super(other, offset, size);
+    }
+
+    /*public static <E> ReadWritePartListView<E> newChecked(List<E> underlying, int offset, int size) {
         if (offset < 0 || offset + size > underlying.size()) {
             throw new IndexOutOfBoundsException(String.format("offset: %d, size: %d, underlying size: %d", offset, size, underlying.size()));
         }
-        return new ListView<>(underlying, offset, size);
+        return new ReadWritePartListView<>(underlying, offset, size);
     }
 
-    public ListView(ListView<E> other, int offset, int size) {
-        this.underlying = other.underlying;
-        this.offset = other.offset + offset;
-        this.size = size;
-    }
-
-    public static <E> ListView<E> newChecked(ListView<E> other, int offset, int size) {
+    public static <E> ReadWritePartListView<E> newChecked(ReadWritePartListView<E> other, int offset, int size) {
         if (offset < 0 || offset + size > other.size()) {
             throw new IndexOutOfBoundsException(String.format("offset: %d, size: %d, underlying size: %d", offset, size, other.size()));
         }
-        return new ListView<>(other, offset, size);
-    }
+        return new ReadWritePartListView<>(other, offset, size);
+    }*/
 
+    @Override
     public E getUnchecked(int i) {
         return underlying.get(offset + i);
     }
 
+    @Override
     public void setUnchecked(int i, E e) {
         underlying.set(offset + i, e);
     }
 
+    @Override
     public E get(int i) {
         if (i < 0 || i >= size) {
             throw new IndexOutOfBoundsException(i);
@@ -48,6 +52,7 @@ public class ListView<E> implements Iterable<E> {
         return getUnchecked(i);
     }
 
+    @Override
     public void set(int i, E e) {
         if (i < 0 || i >= size) {
             throw new IndexOutOfBoundsException(i);
@@ -55,24 +60,13 @@ public class ListView<E> implements Iterable<E> {
         setUnchecked(i, e);
     }
 
+    @Override
     public int size() {
         return size;
     }
 
     @Override
     public Iterator<E> iterator() {
-        return new Iterator<>() {
-            private int idx = 0;
-
-            @Override
-            public boolean hasNext() {
-                return idx < size;
-            }
-
-            @Override
-            public E next() {
-                return getUnchecked(idx++);
-            }
-        };
+        return ReadView.getViewIterator(this);
     }
 }
