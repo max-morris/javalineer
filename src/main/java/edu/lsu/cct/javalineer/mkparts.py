@@ -16,8 +16,9 @@ def mkbody(n,p=1,nindent=0):
     if p > n:
         return "return chunkTask.apply("+(", ".join(["lv"+str(j) for j in range(1,n+1)]))+");"
     else:
+        rw = read_states[read_list[p-1]]
         body = f"""
-{indent}    return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv{p} -> {{
+{indent}    return pi{p}.getUnderlying().runPartitioned{rw}(nChunks, lv{p} -> {{
 {indent}        {mkbody(n,p+1,nindent+4)}
 {indent}    }});
 """
