@@ -5,34 +5,38 @@ import java.util.concurrent.CompletableFuture;
 
 public class Loop {
 
-    public static CompletableFuture<Void> parForEach(int i0, int iN, Function<Integer,CompletableFuture<Void>> body) {
-        for(int i=i0; i<iN; i++) {
+    public static CompletableFuture<?> parForEach(int i0, int iN, Function<Integer, CompletableFuture<Void>> body) {
+        var done = new CountdownLatch(iN - i0);
+
+        for (int i = i0; i < iN; i++) {
             final int i_ = i;
-            CompletableFuture<Void> cf = new CompletableFuture<>();
-            Pool.submit(()->{
+            Pool.run(() -> {
+                body.apply(i_).thenRun(done::signal);
             });
         }
-        CompletableFuture<Void> cf = CompletableFuture.completedFuture(null);
-        for(CompletableFuture<
+
+        return done.getFut();
     }
 
-    public static CompletableFuture<Void> marchingForEach(int i0, int iN, Function<Integer,CompletableFuture<Void>> body) {
+    public static CompletableFuture<Void> marchingForEach(int i0, int iN, Function<Integer, CompletableFuture<Void>> body) {
         CompletableFuture<Void> cf = CompletableFuture.completedFuture(null);
-        for(int i=i0; i<iN; i++) {
+
+        for (int i = i0; i < iN; i++) {
             final int i_ = i;
-            cf = cf.thenCompose((dummy)->{ return body.apply(i_); });
+            cf = cf.thenCompose((dummy) -> body.apply(i_));
         }
+
         return cf;
     }
 
     public static void main(String[] args) throws Exception {
-        var f = marchingForEach(0,10,(i0)->{
+        var f = marchingForEach(0, 10, (i0) -> {
             final CompletableFuture<Void> cf = new CompletableFuture<>();
-            Runnable r = ()->{
+            Runnable r = () -> {
                 try {
                     Thread.sleep(1000);
-                } catch(InterruptedException ie) {}
-                System.out.println("tick "+i0);
+                } catch (InterruptedException ignored) { }
+                System.out.println("tick " + i0);
                 cf.complete(null);
             };
             Thread t = new Thread(r);
