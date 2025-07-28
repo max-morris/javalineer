@@ -41,15 +41,25 @@ public class ReadOnlyPartListView<E> extends PartListView<E> implements ReadView
 
     @Override
     public E get(int i) {
-        if (i + offset < 0 || i + offset >= underlying.size()) {
+        if (i < -ghostSize || i >= size + ghostSize) {
             throw new IndexOutOfBoundsException(i);
         }
         return getUnchecked(i);
     }
 
     @Override
-    public int size() {
-        return size;
+    public int readableSize() {
+        return size + 2*ghostSize;
+    }
+
+    @Override
+    public int writableSize() {
+        return 0;
+    }
+
+    @Override
+    public int ghostSize() {
+        return ghostSize;
     }
 
     @Override

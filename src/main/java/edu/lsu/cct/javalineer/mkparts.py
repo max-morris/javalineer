@@ -18,7 +18,7 @@ def mkbody(n,p=1,nindent=0):
     else:
         rw = read_states[read_list[p-1]]
         body = f"""
-{indent}    return pi{p}.getUnderlying().runPartitioned{rw}(nChunks, lv{p} -> {{
+{indent}    return pi{p}.getUnderlying().runPartitioned{rw}(nChunks, nGhosts, lv{p} -> {{
 {indent}        {mkbody(n,p+1,nindent+4)}
 {indent}    }});
 """

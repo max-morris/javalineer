@@ -23,10 +23,11 @@ public class PartitionableList<E> {
         this(new ArrayList<>());
     }
 
-    public static int partIndex(int part, int numParts, int size) {
-        int N = size / numParts;
-        int R = size % numParts;
-        return N * part + Math.min(part, R);
+    public static int partIndex(int part, int numParts, int size, int nGhosts) {
+        int writableSize = size - 2*nGhosts;
+        int n = writableSize / numParts;
+        int r = writableSize % numParts;
+        return n * part + Math.min(part, n) + nGhosts;
     }
 
     public ReadOnlyPartIntent<E> read() {
@@ -60,8 +61,8 @@ public class PartitionableList<E> {
                                                                           CompletableFuture<Void>> chunkTask,
                                                                   ReadOnlyPartIntent<T1> pi1,
                                                                   ReadOnlyPartIntent<T2> pi2) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
                 return chunkTask.apply(lv1, lv2);
             });
         });
@@ -84,8 +85,8 @@ public class PartitionableList<E> {
                                                                           CompletableFuture<Void>> chunkTask,
                                                                   WriteOnlyPartIntent<T1> pi1,
                                                                   ReadOnlyPartIntent<T2> pi2) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
                 return chunkTask.apply(lv1, lv2);
             });
         });
@@ -108,8 +109,8 @@ public class PartitionableList<E> {
                                                                           CompletableFuture<Void>> chunkTask,
                                                                   ReadOnlyPartIntent<T1> pi1,
                                                                   WriteOnlyPartIntent<T2> pi2) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
                 return chunkTask.apply(lv1, lv2);
             });
         });
@@ -132,8 +133,8 @@ public class PartitionableList<E> {
                                                                           CompletableFuture<Void>> chunkTask,
                                                                   WriteOnlyPartIntent<T1> pi1,
                                                                   WriteOnlyPartIntent<T2> pi2) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
                 return chunkTask.apply(lv1, lv2);
             });
         });
@@ -160,9 +161,9 @@ public class PartitionableList<E> {
                                                                       ReadOnlyPartIntent<T1> pi1,
                                                                       ReadOnlyPartIntent<T2> pi2,
                                                                       ReadOnlyPartIntent<T3> pi3) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, lv3 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv3 -> {
                     return chunkTask.apply(lv1, lv2, lv3);
                 });
             });
@@ -190,9 +191,9 @@ public class PartitionableList<E> {
                                                                       WriteOnlyPartIntent<T1> pi1,
                                                                       ReadOnlyPartIntent<T2> pi2,
                                                                       ReadOnlyPartIntent<T3> pi3) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, lv3 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv3 -> {
                     return chunkTask.apply(lv1, lv2, lv3);
                 });
             });
@@ -220,9 +221,9 @@ public class PartitionableList<E> {
                                                                       ReadOnlyPartIntent<T1> pi1,
                                                                       WriteOnlyPartIntent<T2> pi2,
                                                                       ReadOnlyPartIntent<T3> pi3) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, lv3 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv3 -> {
                     return chunkTask.apply(lv1, lv2, lv3);
                 });
             });
@@ -250,9 +251,9 @@ public class PartitionableList<E> {
                                                                       WriteOnlyPartIntent<T1> pi1,
                                                                       WriteOnlyPartIntent<T2> pi2,
                                                                       ReadOnlyPartIntent<T3> pi3) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, lv3 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv3 -> {
                     return chunkTask.apply(lv1, lv2, lv3);
                 });
             });
@@ -280,9 +281,9 @@ public class PartitionableList<E> {
                                                                       ReadOnlyPartIntent<T1> pi1,
                                                                       ReadOnlyPartIntent<T2> pi2,
                                                                       WriteOnlyPartIntent<T3> pi3) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, lv3 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv3 -> {
                     return chunkTask.apply(lv1, lv2, lv3);
                 });
             });
@@ -310,9 +311,9 @@ public class PartitionableList<E> {
                                                                       WriteOnlyPartIntent<T1> pi1,
                                                                       ReadOnlyPartIntent<T2> pi2,
                                                                       WriteOnlyPartIntent<T3> pi3) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, lv3 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv3 -> {
                     return chunkTask.apply(lv1, lv2, lv3);
                 });
             });
@@ -340,9 +341,9 @@ public class PartitionableList<E> {
                                                                       ReadOnlyPartIntent<T1> pi1,
                                                                       WriteOnlyPartIntent<T2> pi2,
                                                                       WriteOnlyPartIntent<T3> pi3) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, lv3 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv3 -> {
                     return chunkTask.apply(lv1, lv2, lv3);
                 });
             });
@@ -370,9 +371,9 @@ public class PartitionableList<E> {
                                                                       WriteOnlyPartIntent<T1> pi1,
                                                                       WriteOnlyPartIntent<T2> pi2,
                                                                       WriteOnlyPartIntent<T3> pi3) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, lv3 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv3 -> {
                     return chunkTask.apply(lv1, lv2, lv3);
                 });
             });
@@ -404,10 +405,10 @@ public class PartitionableList<E> {
                                                                           ReadOnlyPartIntent<T2> pi2,
                                                                           ReadOnlyPartIntent<T3> pi3,
                                                                           ReadOnlyPartIntent<T4> pi4) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, lv4 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv4 -> {
                         return chunkTask.apply(lv1, lv2, lv3, lv4);
                     });
                 });
@@ -440,10 +441,10 @@ public class PartitionableList<E> {
                                                                           ReadOnlyPartIntent<T2> pi2,
                                                                           ReadOnlyPartIntent<T3> pi3,
                                                                           ReadOnlyPartIntent<T4> pi4) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, lv4 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv4 -> {
                         return chunkTask.apply(lv1, lv2, lv3, lv4);
                     });
                 });
@@ -476,10 +477,10 @@ public class PartitionableList<E> {
                                                                           WriteOnlyPartIntent<T2> pi2,
                                                                           ReadOnlyPartIntent<T3> pi3,
                                                                           ReadOnlyPartIntent<T4> pi4) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, lv4 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv4 -> {
                         return chunkTask.apply(lv1, lv2, lv3, lv4);
                     });
                 });
@@ -512,10 +513,10 @@ public class PartitionableList<E> {
                                                                           WriteOnlyPartIntent<T2> pi2,
                                                                           ReadOnlyPartIntent<T3> pi3,
                                                                           ReadOnlyPartIntent<T4> pi4) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, lv4 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv4 -> {
                         return chunkTask.apply(lv1, lv2, lv3, lv4);
                     });
                 });
@@ -548,10 +549,10 @@ public class PartitionableList<E> {
                                                                           ReadOnlyPartIntent<T2> pi2,
                                                                           WriteOnlyPartIntent<T3> pi3,
                                                                           ReadOnlyPartIntent<T4> pi4) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, lv4 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv4 -> {
                         return chunkTask.apply(lv1, lv2, lv3, lv4);
                     });
                 });
@@ -584,10 +585,10 @@ public class PartitionableList<E> {
                                                                           ReadOnlyPartIntent<T2> pi2,
                                                                           WriteOnlyPartIntent<T3> pi3,
                                                                           ReadOnlyPartIntent<T4> pi4) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, lv4 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv4 -> {
                         return chunkTask.apply(lv1, lv2, lv3, lv4);
                     });
                 });
@@ -620,10 +621,10 @@ public class PartitionableList<E> {
                                                                           WriteOnlyPartIntent<T2> pi2,
                                                                           WriteOnlyPartIntent<T3> pi3,
                                                                           ReadOnlyPartIntent<T4> pi4) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, lv4 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv4 -> {
                         return chunkTask.apply(lv1, lv2, lv3, lv4);
                     });
                 });
@@ -656,10 +657,10 @@ public class PartitionableList<E> {
                                                                           WriteOnlyPartIntent<T2> pi2,
                                                                           WriteOnlyPartIntent<T3> pi3,
                                                                           ReadOnlyPartIntent<T4> pi4) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, lv4 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv4 -> {
                         return chunkTask.apply(lv1, lv2, lv3, lv4);
                     });
                 });
@@ -692,10 +693,10 @@ public class PartitionableList<E> {
                                                                           ReadOnlyPartIntent<T2> pi2,
                                                                           ReadOnlyPartIntent<T3> pi3,
                                                                           WriteOnlyPartIntent<T4> pi4) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, lv4 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv4 -> {
                         return chunkTask.apply(lv1, lv2, lv3, lv4);
                     });
                 });
@@ -728,10 +729,10 @@ public class PartitionableList<E> {
                                                                           ReadOnlyPartIntent<T2> pi2,
                                                                           ReadOnlyPartIntent<T3> pi3,
                                                                           WriteOnlyPartIntent<T4> pi4) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, lv4 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv4 -> {
                         return chunkTask.apply(lv1, lv2, lv3, lv4);
                     });
                 });
@@ -764,10 +765,10 @@ public class PartitionableList<E> {
                                                                           WriteOnlyPartIntent<T2> pi2,
                                                                           ReadOnlyPartIntent<T3> pi3,
                                                                           WriteOnlyPartIntent<T4> pi4) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, lv4 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv4 -> {
                         return chunkTask.apply(lv1, lv2, lv3, lv4);
                     });
                 });
@@ -800,10 +801,10 @@ public class PartitionableList<E> {
                                                                           WriteOnlyPartIntent<T2> pi2,
                                                                           ReadOnlyPartIntent<T3> pi3,
                                                                           WriteOnlyPartIntent<T4> pi4) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, lv4 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv4 -> {
                         return chunkTask.apply(lv1, lv2, lv3, lv4);
                     });
                 });
@@ -836,10 +837,10 @@ public class PartitionableList<E> {
                                                                           ReadOnlyPartIntent<T2> pi2,
                                                                           WriteOnlyPartIntent<T3> pi3,
                                                                           WriteOnlyPartIntent<T4> pi4) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, lv4 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv4 -> {
                         return chunkTask.apply(lv1, lv2, lv3, lv4);
                     });
                 });
@@ -872,10 +873,10 @@ public class PartitionableList<E> {
                                                                           ReadOnlyPartIntent<T2> pi2,
                                                                           WriteOnlyPartIntent<T3> pi3,
                                                                           WriteOnlyPartIntent<T4> pi4) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, lv4 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv4 -> {
                         return chunkTask.apply(lv1, lv2, lv3, lv4);
                     });
                 });
@@ -908,10 +909,10 @@ public class PartitionableList<E> {
                                                                           WriteOnlyPartIntent<T2> pi2,
                                                                           WriteOnlyPartIntent<T3> pi3,
                                                                           WriteOnlyPartIntent<T4> pi4) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, lv4 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv4 -> {
                         return chunkTask.apply(lv1, lv2, lv3, lv4);
                     });
                 });
@@ -944,10 +945,10 @@ public class PartitionableList<E> {
                                                                           WriteOnlyPartIntent<T2> pi2,
                                                                           WriteOnlyPartIntent<T3> pi3,
                                                                           WriteOnlyPartIntent<T4> pi4) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, lv4 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv4 -> {
                         return chunkTask.apply(lv1, lv2, lv3, lv4);
                     });
                 });
@@ -984,11 +985,11 @@ public class PartitionableList<E> {
                                                                               ReadOnlyPartIntent<T3> pi3,
                                                                               ReadOnlyPartIntent<T4> pi4,
                                                                               ReadOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -1026,11 +1027,11 @@ public class PartitionableList<E> {
                                                                               ReadOnlyPartIntent<T3> pi3,
                                                                               ReadOnlyPartIntent<T4> pi4,
                                                                               ReadOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -1068,11 +1069,11 @@ public class PartitionableList<E> {
                                                                               ReadOnlyPartIntent<T3> pi3,
                                                                               ReadOnlyPartIntent<T4> pi4,
                                                                               ReadOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -1110,11 +1111,11 @@ public class PartitionableList<E> {
                                                                               ReadOnlyPartIntent<T3> pi3,
                                                                               ReadOnlyPartIntent<T4> pi4,
                                                                               ReadOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -1152,11 +1153,11 @@ public class PartitionableList<E> {
                                                                               WriteOnlyPartIntent<T3> pi3,
                                                                               ReadOnlyPartIntent<T4> pi4,
                                                                               ReadOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -1194,11 +1195,11 @@ public class PartitionableList<E> {
                                                                               WriteOnlyPartIntent<T3> pi3,
                                                                               ReadOnlyPartIntent<T4> pi4,
                                                                               ReadOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -1236,11 +1237,11 @@ public class PartitionableList<E> {
                                                                               WriteOnlyPartIntent<T3> pi3,
                                                                               ReadOnlyPartIntent<T4> pi4,
                                                                               ReadOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -1278,11 +1279,11 @@ public class PartitionableList<E> {
                                                                               WriteOnlyPartIntent<T3> pi3,
                                                                               ReadOnlyPartIntent<T4> pi4,
                                                                               ReadOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -1320,11 +1321,11 @@ public class PartitionableList<E> {
                                                                               ReadOnlyPartIntent<T3> pi3,
                                                                               WriteOnlyPartIntent<T4> pi4,
                                                                               ReadOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -1362,11 +1363,11 @@ public class PartitionableList<E> {
                                                                               ReadOnlyPartIntent<T3> pi3,
                                                                               WriteOnlyPartIntent<T4> pi4,
                                                                               ReadOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -1404,11 +1405,11 @@ public class PartitionableList<E> {
                                                                               ReadOnlyPartIntent<T3> pi3,
                                                                               WriteOnlyPartIntent<T4> pi4,
                                                                               ReadOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -1446,11 +1447,11 @@ public class PartitionableList<E> {
                                                                               ReadOnlyPartIntent<T3> pi3,
                                                                               WriteOnlyPartIntent<T4> pi4,
                                                                               ReadOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -1488,11 +1489,11 @@ public class PartitionableList<E> {
                                                                               WriteOnlyPartIntent<T3> pi3,
                                                                               WriteOnlyPartIntent<T4> pi4,
                                                                               ReadOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -1530,11 +1531,11 @@ public class PartitionableList<E> {
                                                                               WriteOnlyPartIntent<T3> pi3,
                                                                               WriteOnlyPartIntent<T4> pi4,
                                                                               ReadOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -1572,11 +1573,11 @@ public class PartitionableList<E> {
                                                                               WriteOnlyPartIntent<T3> pi3,
                                                                               WriteOnlyPartIntent<T4> pi4,
                                                                               ReadOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -1614,11 +1615,11 @@ public class PartitionableList<E> {
                                                                               WriteOnlyPartIntent<T3> pi3,
                                                                               WriteOnlyPartIntent<T4> pi4,
                                                                               ReadOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -1656,11 +1657,11 @@ public class PartitionableList<E> {
                                                                               ReadOnlyPartIntent<T3> pi3,
                                                                               ReadOnlyPartIntent<T4> pi4,
                                                                               WriteOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -1698,11 +1699,11 @@ public class PartitionableList<E> {
                                                                               ReadOnlyPartIntent<T3> pi3,
                                                                               ReadOnlyPartIntent<T4> pi4,
                                                                               WriteOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -1740,11 +1741,11 @@ public class PartitionableList<E> {
                                                                               ReadOnlyPartIntent<T3> pi3,
                                                                               ReadOnlyPartIntent<T4> pi4,
                                                                               WriteOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -1782,11 +1783,11 @@ public class PartitionableList<E> {
                                                                               ReadOnlyPartIntent<T3> pi3,
                                                                               ReadOnlyPartIntent<T4> pi4,
                                                                               WriteOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -1824,11 +1825,11 @@ public class PartitionableList<E> {
                                                                               WriteOnlyPartIntent<T3> pi3,
                                                                               ReadOnlyPartIntent<T4> pi4,
                                                                               WriteOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -1866,11 +1867,11 @@ public class PartitionableList<E> {
                                                                               WriteOnlyPartIntent<T3> pi3,
                                                                               ReadOnlyPartIntent<T4> pi4,
                                                                               WriteOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -1908,11 +1909,11 @@ public class PartitionableList<E> {
                                                                               WriteOnlyPartIntent<T3> pi3,
                                                                               ReadOnlyPartIntent<T4> pi4,
                                                                               WriteOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -1950,11 +1951,11 @@ public class PartitionableList<E> {
                                                                               WriteOnlyPartIntent<T3> pi3,
                                                                               ReadOnlyPartIntent<T4> pi4,
                                                                               WriteOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -1992,11 +1993,11 @@ public class PartitionableList<E> {
                                                                               ReadOnlyPartIntent<T3> pi3,
                                                                               WriteOnlyPartIntent<T4> pi4,
                                                                               WriteOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -2034,11 +2035,11 @@ public class PartitionableList<E> {
                                                                               ReadOnlyPartIntent<T3> pi3,
                                                                               WriteOnlyPartIntent<T4> pi4,
                                                                               WriteOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -2076,11 +2077,11 @@ public class PartitionableList<E> {
                                                                               ReadOnlyPartIntent<T3> pi3,
                                                                               WriteOnlyPartIntent<T4> pi4,
                                                                               WriteOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -2118,11 +2119,11 @@ public class PartitionableList<E> {
                                                                               ReadOnlyPartIntent<T3> pi3,
                                                                               WriteOnlyPartIntent<T4> pi4,
                                                                               WriteOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -2160,11 +2161,11 @@ public class PartitionableList<E> {
                                                                               WriteOnlyPartIntent<T3> pi3,
                                                                               WriteOnlyPartIntent<T4> pi4,
                                                                               WriteOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -2202,11 +2203,11 @@ public class PartitionableList<E> {
                                                                               WriteOnlyPartIntent<T3> pi3,
                                                                               WriteOnlyPartIntent<T4> pi4,
                                                                               WriteOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -2244,11 +2245,11 @@ public class PartitionableList<E> {
                                                                               WriteOnlyPartIntent<T3> pi3,
                                                                               WriteOnlyPartIntent<T4> pi4,
                                                                               WriteOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -2286,11 +2287,11 @@ public class PartitionableList<E> {
                                                                               WriteOnlyPartIntent<T3> pi3,
                                                                               WriteOnlyPartIntent<T4> pi4,
                                                                               WriteOnlyPartIntent<T5> pi5) {
-        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, lv1 -> {
-            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, lv2 -> {
-                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, lv3 -> {
-                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, lv4 -> {
-                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, lv5 -> {
+        return pi1.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv1 -> {
+            return pi2.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv2 -> {
+                return pi3.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv3 -> {
+                    return pi4.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv4 -> {
+                        return pi5.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, lv5 -> {
                             return chunkTask.apply(lv1, lv2, lv3, lv4, lv5);
                         });
                     });
@@ -2302,6 +2303,7 @@ public class PartitionableList<E> {
 
 
     public CompletableFuture<Void> runPartitionedReadWrite(int nChunks,
+                                                           int nGhosts,
                                                            PartTask1<ReadWritePartListView<E>, CompletableFuture<Void>> chunkTask) {
         var done = new CompletableFuture<Void>();
 
@@ -2317,18 +2319,18 @@ public class PartitionableList<E> {
             final var tasksDone = new CountdownLatch(nChunks);
 
             for (int i = 0; i < nChunks-1; i++) {
-                final var lo = partIndex(i, nChunks, dataSize);
-                final var hi = partIndex(i+1, nChunks, dataSize);
+                final var lo = partIndex(i, nChunks, dataSize, nGhosts);
+                final var hi = partIndex(i+1, nChunks, dataSize, nGhosts);
                 final var chunkSize = hi - lo;
                 Pool.run(() -> {
-                    final var view = new ReadWritePartListView<>(data, lo, chunkSize);
+                    final var view = new ReadWritePartListView<>(data, lo, chunkSize, nGhosts);
                     chunkTask.apply(view).thenRun(tasksDone::signal);
                 });
             }
-            final var lo = partIndex(nChunks-1, nChunks, dataSize);
-            final var hi = partIndex(nChunks, nChunks, dataSize);
+            final var lo = partIndex(nChunks-1, nChunks, dataSize, nGhosts);
+            final var hi = partIndex(nChunks, nChunks, dataSize, nGhosts);
             final var chunkSize = hi - lo;
-            final var view = new ReadWritePartListView<>(data, lo, chunkSize);
+            final var view = new ReadWritePartListView<>(data, lo, chunkSize, nGhosts);
             chunkTask.apply(view).thenRun(tasksDone::signal);
 
             tasksDone.getFut().thenRun(() -> {
@@ -2346,6 +2348,7 @@ public class PartitionableList<E> {
     }
 
     public CompletableFuture<Void> runPartitionedReadOnly(int nChunks,
+                                                          int nGhosts,
                                                           PartTask1<ReadOnlyPartListView<E>, CompletableFuture<Void>> chunkTask) {
         var done = new CompletableFuture<Void>();
 
@@ -2361,18 +2364,18 @@ public class PartitionableList<E> {
             final var tasksDone = new CountdownLatch(nChunks);
 
             for (int i = 0; i < nChunks-1; i++) {
-                final var lo = partIndex(i, nChunks, dataSize);
-                final var hi = partIndex(i+1, nChunks, dataSize);
+                final var lo = partIndex(i, nChunks, dataSize, nGhosts);
+                final var hi = partIndex(i+1, nChunks, dataSize, nGhosts);
                 final var chunkSize = hi - lo;
                 Pool.run(() -> {
-                    final var view = new ReadOnlyPartListView<>(data, lo, chunkSize);
+                    final var view = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts);
                     chunkTask.apply(view).thenRun(tasksDone::signal);
                 });
             }
-            final var lo = partIndex(nChunks-1, nChunks, dataSize);
-            final var hi = partIndex(nChunks, nChunks, dataSize);
+            final var lo = partIndex(nChunks-1, nChunks, dataSize, nGhosts);
+            final var hi = partIndex(nChunks, nChunks, dataSize, nGhosts);
             final var chunkSize = hi - lo;
-            final var view = new ReadOnlyPartListView<>(data, lo, chunkSize);
+            final var view = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts);
             chunkTask.apply(view).thenRun(tasksDone::signal);
 
             tasksDone.getFut().thenRun(() -> {
@@ -2390,6 +2393,7 @@ public class PartitionableList<E> {
     }
 
     public CompletableFuture<Void> runPartitionedWriteOnly(int nChunks,
+                                                           int nGhosts,
                                                            PartTask1<WriteOnlyPartListView<E>, CompletableFuture<Void>> chunkTask) {
         var done = new CompletableFuture<Void>();
 
@@ -2405,18 +2409,18 @@ public class PartitionableList<E> {
             final var tasksDone = new CountdownLatch(nChunks);
 
             for (int i = 0; i < nChunks-1; i++) {
-                final var lo = partIndex(i, nChunks, dataSize);
-                final var hi = partIndex(i+1, nChunks, dataSize);
+                final var lo = partIndex(i, nChunks, dataSize, nGhosts);
+                final var hi = partIndex(i+1, nChunks, dataSize, nGhosts);
                 final var chunkSize = hi - lo;
                 Pool.run(() -> {
-                    final var view = new WriteOnlyPartListView<>(data, lo, chunkSize);
+                    final var view = new WriteOnlyPartListView<>(data, lo, chunkSize, nGhosts);
                     chunkTask.apply(view).thenRun(tasksDone::signal);
                 });
             }
-            final var lo = partIndex(nChunks-1, nChunks, dataSize);
-            final var hi = partIndex(nChunks, nChunks, dataSize);
+            final var lo = partIndex(nChunks-1, nChunks, dataSize, nGhosts);
+            final var hi = partIndex(nChunks, nChunks, dataSize, nGhosts);
             final var chunkSize = hi - lo;
-            final var view = new WriteOnlyPartListView<>(data, lo, chunkSize);
+            final var view = new WriteOnlyPartListView<>(data, lo, chunkSize, nGhosts);
             chunkTask.apply(view).thenRun(tasksDone::signal);
 
             tasksDone.getFut().thenRun(() -> {
@@ -2435,6 +2439,12 @@ public class PartitionableList<E> {
 
     public CompletableFuture<E> reducePartitioned(int nChunks,
                                                   Function<ReadOnlyPartListView<E>, CompletableFuture<E>> chunkTask) {
+        return reducePartitioned(nChunks, 0, chunkTask);
+    }
+
+    public CompletableFuture<E> reducePartitioned(int nChunks,
+                                                  int nGhosts,
+                                                  Function<ReadOnlyPartListView<E>, CompletableFuture<E>> chunkTask) {
         var result = new CompletableFuture<E>();
 
         Guard.runCondition(notBusy, busyVar -> {
@@ -2452,11 +2462,11 @@ public class PartitionableList<E> {
             final var intermediateGuard = new Guard();
 
             for (int i = 0; i < nChunks - 1; i++) {
-                final var lo = partIndex(i, nChunks, dataSize);
-                final var hi = partIndex(i+1, nChunks, dataSize);
+                final var lo = partIndex(i, nChunks, dataSize, nGhosts);
+                final var hi = partIndex(i+1, nChunks, dataSize, nGhosts);
                 final var chunkSize = hi - lo;
                 Pool.run(() -> {
-                    final var view = new ReadOnlyPartListView<>(data, lo, chunkSize);
+                    final var view = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts);
                     chunkTask.apply(view).thenAccept(res -> {
                         Guard.runGuarded(intermediateGuard, () -> {
                             intermediateList.add(res);
@@ -2466,10 +2476,10 @@ public class PartitionableList<E> {
                 });
             }
 
-            final var lo = partIndex(nChunks - 1, nChunks, dataSize);
-            final var hi = partIndex(nChunks, nChunks, dataSize);
+            final var lo = partIndex(nChunks - 1, nChunks, dataSize, nGhosts);
+            final var hi = partIndex(nChunks, nChunks, dataSize, nGhosts);
             final var chunkSize = hi - lo;
-            final var viewLast = new ReadOnlyPartListView<>(data, lo, chunkSize);
+            final var viewLast = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts);
             chunkTask.apply(viewLast).thenAccept(res -> {
                 Guard.runGuarded(intermediateGuard, () -> {
                     intermediateList.add(res);
@@ -2479,7 +2489,7 @@ public class PartitionableList<E> {
 
             tasksDone.getFut().thenRun(() -> {
                 assert nChunks == intermediateList.size();
-                final var view = new ReadOnlyPartListView<>(intermediateList, 0, nChunks);
+                final var view = new ReadOnlyPartListView<>(intermediateList, 0, nChunks, 0);
 
                 chunkTask.apply(view).thenAccept(result::complete);
 

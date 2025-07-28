@@ -46,7 +46,7 @@ public class ReadWritePartListView<E> extends PartListView<E> implements ReadWri
 
     @Override
     public E get(int i) {
-        if (i < 0 || i >= size) {
+        if (i < -ghostSize || i >= size + ghostSize) {
             throw new IndexOutOfBoundsException(i);
         }
         return getUnchecked(i);
@@ -61,8 +61,18 @@ public class ReadWritePartListView<E> extends PartListView<E> implements ReadWri
     }
 
     @Override
-    public int size() {
+    public int readableSize() {
+        return size + 2*ghostSize;
+    }
+
+    @Override
+    public int writableSize() {
         return size;
+    }
+
+    @Override
+    public int ghostSize() {
+        return ghostSize;
     }
 
     @Override

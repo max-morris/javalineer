@@ -1,5 +1,7 @@
 package edu.lsu.cct.javalineer;
 
 public interface View<T> {
-    int size();
+    int readableSize();
+    int writableSize();
+    int ghostSize();
 }

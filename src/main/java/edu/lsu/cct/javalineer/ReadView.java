@@ -9,7 +9,7 @@ interface ReadView<T> extends View<T>, Iterable<T> {
     static <T> Iterator<T> getViewIterator(final ReadView<T> readView) {
         return new Iterator<>() {
             private int idx = 0;
-            private final int size = readView.size();
+            private final int size = readView.readableSize();
 
             @Override
             public boolean hasNext() {
