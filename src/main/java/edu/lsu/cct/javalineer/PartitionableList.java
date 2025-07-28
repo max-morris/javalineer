@@ -27,7 +27,7 @@ public class PartitionableList<E> {
         int writableSize = size - 2*nGhosts;
         int n = writableSize / numParts;
         int r = writableSize % numParts;
-        return n * part + Math.min(part, n) + nGhosts;
+        return n * part + Math.min(part, r) + nGhosts;
     }
 
     public ReadOnlyPartIntent<E> read() {
