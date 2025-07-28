@@ -29,7 +29,7 @@ def mkbody(n,p=1,nindent=0):
 
 count = 0
 
-for i in range(2,6):
+for i in range(1,6):
     tlist = "<"+(", ".join(["T"+str(j) for j in range(1,i+1)]))+">"
     read_list = [0 for j in range(i)]
     while True:
