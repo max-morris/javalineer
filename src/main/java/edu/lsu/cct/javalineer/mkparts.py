@@ -47,23 +47,23 @@ for i in range(2,6):
             partlists += f"""
                                                                 {rw}PartListView<T{j}>{endp}"""
             intents += f"""
-                                                             {rw}PartIntent<T{j}> pi{j}{end}"""
+                                                             {rw}PartIntent<T{j}> pi{j},"""
         partlists += f"""
-                                                                CompletableFuture<Void>> chunkTask,"""
+                                                                CompletableFuture<Void>> chunkTask) {{"""
         template = f"""
-public static {tlist} CompletableFuture<Void> runPartitioned(int nChunks,
+public static {tlist} CompletableFuture<Void> runPartitioned(int nChunks,{intents}
                                                              PartTask{i}<{partlists}"""
-        template += intents
+        #template += intents
         plist = ", ".join(["pi"+str(j) for j in range(1,i+1)])
         template += f"""
-    return runPartitioned(nChunks, 0, chunkTask, {plist});
+    return runPartitioned(nChunks, 0, {plist}, chunkTask);
 }}"""
         print(template)
         #====================
         template = f"""
-public static {tlist} CompletableFuture<Void> runPartitioned(int nChunks, int nGhosts,
+public static {tlist} CompletableFuture<Void> runPartitioned(int nChunks, int nGhosts,{intents}
                                                              PartTask{i}<{partlists}"""
-        template += intents
+        #template += intents
         template += mkbody(i) + "\n}"
         print(template)
         #====================
