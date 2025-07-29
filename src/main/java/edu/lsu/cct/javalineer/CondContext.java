@@ -35,6 +35,17 @@ public final class CondContext<T extends CondTask> {
         return new CondContext<>(GuardSet.of(guardVars), vars);
     }
 
+    static <T extends CondTask> CondContext<T> newCondCached(Guard... guards) {
+        return new CondContext<>(GuardSet.ofCached(guards));
+    }
+
+    static <T extends CondTask> CondContext<T> newCondCached(GuardVar<?>... guardVars) {
+        var vars = Arrays.stream(guardVars)
+                         .map(gv -> gv.var)
+                         .toArray(Var[]::new);
+        return new CondContext<>(GuardSet.ofCached(guardVars), vars);
+    }
+
     Var<?> getVar(int idx) {
         return vars[idx];
     }

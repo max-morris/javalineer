@@ -4,8 +4,8 @@ import java.util.Iterator;
 import java.util.List;
 
 public class ReadOnlyPartListView<E> extends PartListView<E> implements ReadView<E> {
-    public ReadOnlyPartListView(List<E> underlying, int offset, int size, int ghostSize) {
-        super(underlying, offset, size, ghostSize);
+    public ReadOnlyPartListView(List<E> underlying, int offset, int size, int ghostSize, int partitionNum) {
+        super(underlying, offset, size, ghostSize, partitionNum);
     }
 
     public ReadOnlyPartListView(List<E> underlying, int offset, int size) {
@@ -60,6 +60,11 @@ public class ReadOnlyPartListView<E> extends PartListView<E> implements ReadView
     @Override
     public int ghostSize() {
         return ghostSize;
+    }
+
+    @Override
+    public int partitionNum() {
+        return partitionNum;
     }
 
     @Override

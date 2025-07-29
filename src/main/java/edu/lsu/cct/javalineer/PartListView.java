@@ -4,21 +4,22 @@ import java.util.List;
 
 public abstract class PartListView<E> implements View<E> {
     protected final List<E> underlying;
-    protected final int offset, size, ghostSize;
+    protected final int offset, size, ghostSize, partitionNum;
 
-    public PartListView(List<E> underlying, int offset, int size, int ghostSize) {
+    public PartListView(List<E> underlying, int offset, int size, int ghostSize, int partitionNum) {
         this.underlying = underlying;
         this.offset = offset;
         this.size = size;
         this.ghostSize = ghostSize;
+        this.partitionNum = partitionNum;
     }
 
     public PartListView(List<E> underlying, int offset, int size) {
-        this(underlying, offset, size, 0);
+        this(underlying, offset, size, 0, 0);
     }
 
     public PartListView(PartListView<E> other, int offset, int size, int ghostSize) {
-        this(other.underlying, offset, size, ghostSize);
+        this(other.underlying, offset, size, ghostSize, 0);
     }
 
     public PartListView(PartListView<E> other, int offset, int size) {
