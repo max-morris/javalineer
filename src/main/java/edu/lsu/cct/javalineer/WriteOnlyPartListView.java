@@ -65,4 +65,14 @@ public class WriteOnlyPartListView<E> extends PartListView<E> implements WriteVi
     public int partitionNum() {
         return partitionNum;
     }
+
+    @Override
+    public int begin() {
+        return 0;
+    }
+
+    @Override
+    public int end() {
+        return size;
+    }
 }

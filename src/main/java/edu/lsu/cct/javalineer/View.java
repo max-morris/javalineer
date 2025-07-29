@@ -5,4 +5,6 @@ public interface View<T> {
     int writableSize();
     int ghostSize();
     int partitionNum();
+    int begin();
+    int end();
 }

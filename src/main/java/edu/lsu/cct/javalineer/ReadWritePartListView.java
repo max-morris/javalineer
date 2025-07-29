@@ -81,6 +81,16 @@ public class ReadWritePartListView<E> extends PartListView<E> implements ReadWri
     }
 
     @Override
+    public int begin() {
+        return -ghostSize;
+    }
+
+    @Override
+    public int end() {
+        return size + ghostSize;
+    }
+
+    @Override
     public Iterator<E> iterator() {
         return ReadView.getViewIterator(this);
     }

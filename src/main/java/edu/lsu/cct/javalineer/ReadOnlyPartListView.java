@@ -68,6 +68,16 @@ public class ReadOnlyPartListView<E> extends PartListView<E> implements ReadView
     }
 
     @Override
+    public int begin() {
+        return -ghostSize;
+    }
+
+    @Override
+    public int end() {
+        return size + ghostSize;
+    }
+
+    @Override
     public Iterator<E> iterator() {
         return ReadView.getViewIterator(this);
     }
