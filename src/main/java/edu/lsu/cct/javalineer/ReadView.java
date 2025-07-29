@@ -10,6 +10,7 @@ interface ReadView<T> extends View<T>, Iterable<T> {
         return new Iterator<>() {
             private int idx = 0;
             private final int size = readView.readableSize();
+            private final int ghostSize = readView.ghostSize();
 
             @Override
             public boolean hasNext() {
@@ -18,7 +19,7 @@ interface ReadView<T> extends View<T>, Iterable<T> {
 
             @Override
             public T next() {
-                return readView.getUnchecked(idx++);
+                return readView.getUnchecked(idx++ - ghostSize);
             }
         };
     }
