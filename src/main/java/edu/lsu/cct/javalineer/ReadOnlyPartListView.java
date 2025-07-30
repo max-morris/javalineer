@@ -78,6 +78,11 @@ public class ReadOnlyPartListView<E> extends PartListView<E> implements ReadView
     }
 
     @Override
+    public int size() {
+        return readableSize();
+    }
+
+    @Override
     public Iterator<E> iterator() {
         return ReadView.getViewIterator(this);
     }

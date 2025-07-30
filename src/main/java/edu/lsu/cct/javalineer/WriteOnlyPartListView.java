@@ -57,6 +57,11 @@ public class WriteOnlyPartListView<E> extends PartListView<E> implements WriteVi
     }
 
     @Override
+    public int size() {
+        return writableSize();
+    }
+
+    @Override
     public int ghostSize() {
         return ghostSize;
     }

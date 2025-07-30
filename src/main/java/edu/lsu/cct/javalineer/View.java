@@ -7,4 +7,5 @@ public interface View<T> {
     int partitionNum();
     int begin();
     int end();
+    int size();
 }
