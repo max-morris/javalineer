@@ -45,6 +45,7 @@ public class Pool {
                 pw.println("Pool.run(): Exception in thread " + Thread.currentThread().getName() + ":");
                 t.printStackTrace(pw);
                 System.err.print(sw);
+                System.err.flush();
             }
         });
     }
