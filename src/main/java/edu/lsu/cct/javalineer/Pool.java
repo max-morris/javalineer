@@ -2,6 +2,8 @@ package edu.lsu.cct.javalineer;
 
 import java.util.concurrent.*;
 import java.util.function.Supplier;
+import java.io.StringWriter;
+import java.io.PrintWriter;
 
 public class Pool {
     private static Executor thePool = getDefaultPool();
@@ -34,7 +36,17 @@ public class Pool {
     }
 
     public static void run(Runnable task) {
-        thePool.execute(task);
+        thePool.execute(() -> {
+            try {
+                task.run();
+            } catch (Throwable t) {
+                var sw = new StringWriter();
+                var pw = new PrintWriter(sw);
+                pw.println("Pool.run(): Exception in thread " + Thread.currentThread().getName() + ":");
+                t.printStackTrace(pw);
+                System.err.print(sw);
+            }
+        });
     }
 
     public static <T> CompletableFuture<T> run(Supplier<CompletableFuture<T>> task) {
