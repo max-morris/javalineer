@@ -1,5 +1,7 @@
 package edu.lsu.cct.javalineer;
 
+import java.io.IOException;
+import java.util.Objects;
 import java.util.concurrent.*;
 import java.util.function.Supplier;
 import java.io.StringWriter;
@@ -35,6 +37,12 @@ public class Pool {
         thePool = newPool;
     }
 
+    private static void reallyPrintln(Object o) {
+        try (PrintWriter pw = new PrintWriter("/dev/tty")) {
+            pw.println(Objects.toString(o));
+        } catch (IOException ignored) { }
+    }
+
     public static void run(Runnable task) {
         thePool.execute(() -> {
             try {
@@ -44,8 +52,7 @@ public class Pool {
                 var pw = new PrintWriter(sw);
                 pw.println("Pool.run(): Exception in thread " + Thread.currentThread().getName() + ":");
                 t.printStackTrace(pw);
-                System.err.print(sw);
-                System.err.flush();
+                reallyPrintln(sw);
             }
         });
     }
