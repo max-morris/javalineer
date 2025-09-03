@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
+import java.util.function.IntFunction;
 
 @SuppressWarnings({"unused", "CodeBlock2Expr"})
 public class PartitionableList<E> {
@@ -22,6 +23,19 @@ public class PartitionableList<E> {
 
     public PartitionableList() {
         this(new ArrayList<>());
+    }
+
+    public PartitionableList(int size, IntFunction<E> fillFunction) {
+        this.data = new ArrayList<E>(size);
+        for (int i = 0; i < size; i++) {
+            this.data.add(fillFunction.apply(i));
+        }
+        this.busy = new GuardVar<>(false);
+        this.notBusy = Guard.newCondition(this.busy);
+    }
+
+    public static <E> PartitionableList<E> of(int size, IntFunction<E> fillFunction) {
+        return new PartitionableList<E>(size, fillFunction);
     }
 
     public static int partIndex(int part, int numParts, int size, int nGhosts) {
