@@ -60,18 +60,16 @@ public class PartitionableList<E> {
     public static <T> CompletableFuture<Void> runPartitioned(int nChunks,
                                                              int nGhosts,
                                                              ReadOnlyPartIntent<T> pi,
-                                                             PartTask1<
-                                                                     ReadOnlyPartListView<T>,
-                                                                     CompletableFuture<Void>
+                                                             VoidPartTask1<
+                                                                     ReadOnlyPartListView<T>
                                                                      > chunkTask) {
         return pi.getUnderlying().runPartitionedReadOnly(nChunks, nGhosts, chunkTask);
     }
 
     public static <T> CompletableFuture<Void> runPartitioned(int nChunks,
                                                              ReadOnlyPartIntent<T> pi,
-                                                             PartTask1<
-                                                                     ReadOnlyPartListView<T>,
-                                                                     CompletableFuture<Void>
+                                                             VoidPartTask1<
+                                                                     ReadOnlyPartListView<T>
                                                                      > chunkTask) {
         return pi.getUnderlying().runPartitionedReadOnly(nChunks, 0, chunkTask);
     }
@@ -79,27 +77,24 @@ public class PartitionableList<E> {
     public static <T> CompletableFuture<Void> runPartitioned(int nChunks,
                                                              int nGhosts,
                                                              WriteOnlyPartIntent<T> pi,
-                                                             PartTask1<
-                                                                     WriteOnlyPartListView<T>,
-                                                                     CompletableFuture<Void>
+                                                             VoidPartTask1<
+                                                                     WriteOnlyPartListView<T>
                                                                      > chunkTask) {
         return pi.getUnderlying().runPartitionedWriteOnly(nChunks, nGhosts, chunkTask);
     }
 
     public static <T> CompletableFuture<Void> runPartitioned(int nChunks,
                                                              WriteOnlyPartIntent<T> pi,
-                                                             PartTask1<
-                                                                     WriteOnlyPartListView<T>,
-                                                                     CompletableFuture<Void>
+                                                             VoidPartTask1<
+                                                                     WriteOnlyPartListView<T>
                                                                      > chunkTask) {
         return pi.getUnderlying().runPartitionedWriteOnly(nChunks, 0, chunkTask);
     }
 
     public static <T> CompletableFuture<Void> runPartitioned(int nChunks,
                                                              ReadWritePartIntent<T> pi,
-                                                             PartTask1<
-                                                                     ReadWritePartListView<T>,
-                                                                     CompletableFuture<Void>
+                                                             VoidPartTask1<
+                                                                     ReadWritePartListView<T>
                                                                      > chunkTask) {
         return pi.getUnderlying().runPartitionedReadWrite(nChunks, 0, chunkTask);
     }
