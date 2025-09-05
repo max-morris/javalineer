@@ -56374,7 +56374,7 @@ public class PartitionableList<E> {
 
     public CompletableFuture<Void> runPartitionedReadWrite(int nChunks,
                                                            int nGhosts,
-                                                           PartTask1<ReadWritePartListView<E>, CompletableFuture<Void>> chunkTask) {
+                                                           VoidPartTask1<ReadWritePartListView<E>> chunkTask) {
         var done = new CompletableFuture<Void>();
 
         Guard.runCondition(notBusy, busyVar -> {
@@ -56395,14 +56395,16 @@ public class PartitionableList<E> {
                 final var partNum = i;
                 Pool.run(() -> {
                     final var view = new ReadWritePartListView<>(data, lo, chunkSize, nGhosts, partNum);
-                    chunkTask.apply(view).thenRun(tasksDone::signal);
+                    chunkTask.run(view);
+                    tasksDone.signal();
                 });
             }
             final var lo = partIndex(nChunks - 1, nChunks, dataSize, nGhosts);
             final var hi = partIndex(nChunks, nChunks, dataSize, nGhosts);
             final var chunkSize = hi - lo;
             final var view = new ReadWritePartListView<>(data, lo, chunkSize, nGhosts, nChunks - 1);
-            chunkTask.apply(view).thenRun(tasksDone::signal);
+            chunkTask.run(view);
+            tasksDone.signal();
 
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
@@ -56418,54 +56420,9 @@ public class PartitionableList<E> {
         return done;
     }
 
-    private CompletableFuture<List<PartTask1<ReadOnlyPartListView<E>, CompletableFuture<Void>>>> doPartReadOnly(
-            int nChunks,
-            int nGhosts,
-            PartTask1<ReadOnlyPartListView<E>, CompletableFuture<Void>> chunkTask
-    ) {
-        var ret = new CompletableFuture<List<PartTask1<ReadOnlyPartListView<E>, CompletableFuture<Void>>>>();
-        var arr = new ArrayList<PartTask1<ReadOnlyPartListView<E>, CompletableFuture<Void>>>();
-
-        Guard.runCondition(notBusy, busyVar -> {
-            if (busyVar.get()) {
-                return false;
-            }
-
-            busyVar.set(true);
-
-            final var dataSize = data.size();
-            final var tasksDone = new CountdownLatch(nChunks);
-
-            for (int i = 0; i < nChunks; i++) {
-                final var lo = partIndex(i, nChunks, dataSize, nGhosts);
-                final var hi = partIndex(i + 1, nChunks, dataSize, nGhosts);
-                final var chunkSize = hi - lo;
-                final var partNum = i;
-
-                arr.add(lv -> {
-                    final var view = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum);
-                    return chunkTask.apply(view).thenRun(tasksDone::signal);
-                });
-            }
-
-            ret.complete(arr);
-
-            tasksDone.getFut().thenRun(() -> {
-                Guard.runGuarded(busy, busyVar1 -> {
-                    busyVar1.set(false);
-                    notBusy.signal();
-                });
-            });
-
-            return true;
-        });
-
-        return ret;
-    }
-
     public CompletableFuture<Void> runPartitionedReadOnly(int nChunks,
                                                           int nGhosts,
-                                                          PartTask1<ReadOnlyPartListView<E>, CompletableFuture<Void>> chunkTask) {
+                                                          VoidPartTask1<ReadOnlyPartListView<E>> chunkTask) {
         var done = new CompletableFuture<Void>();
 
         Guard.runCondition(notBusy, busyVar -> {
@@ -56486,14 +56443,16 @@ public class PartitionableList<E> {
                 final var partNum = i;
                 Pool.run(() -> {
                     final var view = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum);
-                    chunkTask.apply(view).thenRun(tasksDone::signal);
+                    chunkTask.run(view);
+                    tasksDone.signal();
                 });
             }
             final var lo = partIndex(nChunks - 1, nChunks, dataSize, nGhosts);
             final var hi = partIndex(nChunks, nChunks, dataSize, nGhosts);
             final var chunkSize = hi - lo;
             final var view = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts, nChunks - 1);
-            chunkTask.apply(view).thenRun(tasksDone::signal);
+            chunkTask.run(view);
+            tasksDone.signal();
 
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
@@ -56511,7 +56470,7 @@ public class PartitionableList<E> {
 
     public CompletableFuture<Void> runPartitionedWriteOnly(int nChunks,
                                                            int nGhosts,
-                                                           PartTask1<WriteOnlyPartListView<E>, CompletableFuture<Void>> chunkTask) {
+                                                           VoidPartTask1<WriteOnlyPartListView<E>> chunkTask) {
         var done = new CompletableFuture<Void>();
 
         Guard.runCondition(notBusy, busyVar -> {
@@ -56531,14 +56490,16 @@ public class PartitionableList<E> {
                 final var partNum = i;
                 Pool.run(() -> {
                     final var view = new WriteOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum);
-                    chunkTask.apply(view).thenRun(tasksDone::signal);
+                    chunkTask.run(view);
+                    tasksDone.signal();
                 });
             }
             final var lo = partIndex(nChunks - 1, nChunks, dataSize, nGhosts);
             final var hi = partIndex(nChunks, nChunks, dataSize, nGhosts);
             final var chunkSize = hi - lo;
             final var view = new WriteOnlyPartListView<>(data, lo, chunkSize, nGhosts, nChunks - 1);
-            chunkTask.apply(view).thenRun(tasksDone::signal);
+            chunkTask.run(view);
+            tasksDone.signal();
 
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
