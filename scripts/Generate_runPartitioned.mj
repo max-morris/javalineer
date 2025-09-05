@@ -26,7 +26,7 @@ fn mkChunkTask(rwList: list<string>) -> string {
     let n = rwList.len();
     let argsStr = args.join(",\n");
 
-    "PartTask${n}<\n${argsStr},\nCompletableFuture<Void>> chunkTask"
+    "VoidPartTask${n}<\n${argsStr}> chunkTask"
 }
 
 fn mkListInits(n: int) -> string {
@@ -97,7 +97,8 @@ Guard.runCondition(listsNotBusy, (${busyList.join(", ")}) -> {
         ${mkViewInits(rwList)}
 
         Pool.run(() -> {
-            chunkTask.apply(${viewList}).thenRun(tasksDone::signal);
+            chunkTask.run(${viewList});
+            tasksDone.signal();
         });
     }
 
@@ -105,7 +106,8 @@ Guard.runCondition(listsNotBusy, (${busyList.join(", ")}) -> {
 
     ${mkViewInits(rwList)}
 
-    chunkTask.apply(${viewList}).thenRun(tasksDone::signal);
+    chunkTask.run(${viewList});
+    tasksDone.signal();
 
     tasksDone.getFut().thenRun(() -> {
         done.complete(null);

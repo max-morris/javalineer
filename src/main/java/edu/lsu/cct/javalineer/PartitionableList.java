@@ -109,22 +109,19 @@ public class PartitionableList<E> {
             int nChunks,
             ReadWritePartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
-            PartTask2<
+            VoidPartTask2<
                     ReadWritePartListView<T1>,
-                    ReadWritePartListView<T2>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T2>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, chunkTask);
     }
-
     private static <T1, T2> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
-            PartTask2<
+            VoidPartTask2<
                     ReadWritePartListView<T1>,
-                    ReadWritePartListView<T2>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T2>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -153,7 +150,8 @@ public class PartitionableList<E> {
                 final var chunkSize2 = hi2 - lo2;
                 final var view2 = new ReadWritePartListView<>(data2, lo2, chunkSize2, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -169,7 +167,8 @@ public class PartitionableList<E> {
             final var hi2 = partIndex(partNum + 1, nChunks, dataSize2, nGhosts);
             final var chunkSize2 = hi2 - lo2;
             final var view2 = new ReadWritePartListView<>(data2, lo2, chunkSize2, nGhosts, partNum);
-            chunkTask.apply(view1, view2).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -200,22 +199,19 @@ public class PartitionableList<E> {
             int nChunks,
             WriteOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
-            PartTask2<
+            VoidPartTask2<
                     WriteOnlyPartListView<T1>,
-                    ReadWritePartListView<T2>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T2>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, chunkTask);
     }
-
     private static <T1, T2> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
-            PartTask2<
+            VoidPartTask2<
                     WriteOnlyPartListView<T1>,
-                    ReadWritePartListView<T2>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T2>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -244,7 +240,8 @@ public class PartitionableList<E> {
                 final var chunkSize2 = hi2 - lo2;
                 final var view2 = new ReadWritePartListView<>(data2, lo2, chunkSize2, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -260,7 +257,8 @@ public class PartitionableList<E> {
             final var hi2 = partIndex(partNum + 1, nChunks, dataSize2, nGhosts);
             final var chunkSize2 = hi2 - lo2;
             final var view2 = new ReadWritePartListView<>(data2, lo2, chunkSize2, nGhosts, partNum);
-            chunkTask.apply(view1, view2).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -291,22 +289,19 @@ public class PartitionableList<E> {
             int nChunks,
             ReadWritePartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
-            PartTask2<
+            VoidPartTask2<
                     ReadWritePartListView<T1>,
-                    WriteOnlyPartListView<T2>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T2>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, chunkTask);
     }
-
     private static <T1, T2> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
-            PartTask2<
+            VoidPartTask2<
                     ReadWritePartListView<T1>,
-                    WriteOnlyPartListView<T2>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T2>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -335,7 +330,8 @@ public class PartitionableList<E> {
                 final var chunkSize2 = hi2 - lo2;
                 final var view2 = new WriteOnlyPartListView<>(data2, lo2, chunkSize2, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -351,7 +347,8 @@ public class PartitionableList<E> {
             final var hi2 = partIndex(partNum + 1, nChunks, dataSize2, nGhosts);
             final var chunkSize2 = hi2 - lo2;
             final var view2 = new WriteOnlyPartListView<>(data2, lo2, chunkSize2, nGhosts, partNum);
-            chunkTask.apply(view1, view2).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -382,22 +379,19 @@ public class PartitionableList<E> {
             int nChunks,
             WriteOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
-            PartTask2<
+            VoidPartTask2<
                     WriteOnlyPartListView<T1>,
-                    WriteOnlyPartListView<T2>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T2>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, chunkTask);
     }
-
     public static <T1, T2> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
-            PartTask2<
+            VoidPartTask2<
                     WriteOnlyPartListView<T1>,
-                    WriteOnlyPartListView<T2>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T2>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -426,7 +420,8 @@ public class PartitionableList<E> {
                 final var chunkSize2 = hi2 - lo2;
                 final var view2 = new WriteOnlyPartListView<>(data2, lo2, chunkSize2, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -442,7 +437,8 @@ public class PartitionableList<E> {
             final var hi2 = partIndex(partNum + 1, nChunks, dataSize2, nGhosts);
             final var chunkSize2 = hi2 - lo2;
             final var view2 = new WriteOnlyPartListView<>(data2, lo2, chunkSize2, nGhosts, partNum);
-            chunkTask.apply(view1, view2).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -473,22 +469,19 @@ public class PartitionableList<E> {
             int nChunks,
             ReadWritePartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
-            PartTask2<
+            VoidPartTask2<
                     ReadWritePartListView<T1>,
-                    ReadOnlyPartListView<T2>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T2>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, chunkTask);
     }
-
     private static <T1, T2> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
-            PartTask2<
+            VoidPartTask2<
                     ReadWritePartListView<T1>,
-                    ReadOnlyPartListView<T2>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T2>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -517,7 +510,8 @@ public class PartitionableList<E> {
                 final var chunkSize2 = hi2 - lo2;
                 final var view2 = new ReadOnlyPartListView<>(data2, lo2, chunkSize2, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -533,7 +527,8 @@ public class PartitionableList<E> {
             final var hi2 = partIndex(partNum + 1, nChunks, dataSize2, nGhosts);
             final var chunkSize2 = hi2 - lo2;
             final var view2 = new ReadOnlyPartListView<>(data2, lo2, chunkSize2, nGhosts, partNum);
-            chunkTask.apply(view1, view2).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -564,22 +559,19 @@ public class PartitionableList<E> {
             int nChunks,
             ReadOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
-            PartTask2<
+            VoidPartTask2<
                     ReadOnlyPartListView<T1>,
-                    ReadWritePartListView<T2>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T2>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, chunkTask);
     }
-
     private static <T1, T2> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
-            PartTask2<
+            VoidPartTask2<
                     ReadOnlyPartListView<T1>,
-                    ReadWritePartListView<T2>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T2>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -608,7 +600,8 @@ public class PartitionableList<E> {
                 final var chunkSize2 = hi2 - lo2;
                 final var view2 = new ReadWritePartListView<>(data2, lo2, chunkSize2, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -624,7 +617,8 @@ public class PartitionableList<E> {
             final var hi2 = partIndex(partNum + 1, nChunks, dataSize2, nGhosts);
             final var chunkSize2 = hi2 - lo2;
             final var view2 = new ReadWritePartListView<>(data2, lo2, chunkSize2, nGhosts, partNum);
-            chunkTask.apply(view1, view2).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -655,22 +649,19 @@ public class PartitionableList<E> {
             int nChunks,
             ReadOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
-            PartTask2<
+            VoidPartTask2<
                     ReadOnlyPartListView<T1>,
-                    WriteOnlyPartListView<T2>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T2>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, chunkTask);
     }
-
     public static <T1, T2> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
-            PartTask2<
+            VoidPartTask2<
                     ReadOnlyPartListView<T1>,
-                    WriteOnlyPartListView<T2>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T2>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -699,7 +690,8 @@ public class PartitionableList<E> {
                 final var chunkSize2 = hi2 - lo2;
                 final var view2 = new WriteOnlyPartListView<>(data2, lo2, chunkSize2, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -715,7 +707,8 @@ public class PartitionableList<E> {
             final var hi2 = partIndex(partNum + 1, nChunks, dataSize2, nGhosts);
             final var chunkSize2 = hi2 - lo2;
             final var view2 = new WriteOnlyPartListView<>(data2, lo2, chunkSize2, nGhosts, partNum);
-            chunkTask.apply(view1, view2).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -746,22 +739,19 @@ public class PartitionableList<E> {
             int nChunks,
             WriteOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
-            PartTask2<
+            VoidPartTask2<
                     WriteOnlyPartListView<T1>,
-                    ReadOnlyPartListView<T2>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T2>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, chunkTask);
     }
-
     public static <T1, T2> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
-            PartTask2<
+            VoidPartTask2<
                     WriteOnlyPartListView<T1>,
-                    ReadOnlyPartListView<T2>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T2>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -790,7 +780,8 @@ public class PartitionableList<E> {
                 final var chunkSize2 = hi2 - lo2;
                 final var view2 = new ReadOnlyPartListView<>(data2, lo2, chunkSize2, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -806,7 +797,8 @@ public class PartitionableList<E> {
             final var hi2 = partIndex(partNum + 1, nChunks, dataSize2, nGhosts);
             final var chunkSize2 = hi2 - lo2;
             final var view2 = new ReadOnlyPartListView<>(data2, lo2, chunkSize2, nGhosts, partNum);
-            chunkTask.apply(view1, view2).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -837,22 +829,19 @@ public class PartitionableList<E> {
             int nChunks,
             ReadOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
-            PartTask2<
+            VoidPartTask2<
                     ReadOnlyPartListView<T1>,
-                    ReadOnlyPartListView<T2>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T2>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, chunkTask);
     }
-
     public static <T1, T2> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
-            PartTask2<
+            VoidPartTask2<
                     ReadOnlyPartListView<T1>,
-                    ReadOnlyPartListView<T2>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T2>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -881,7 +870,8 @@ public class PartitionableList<E> {
                 final var chunkSize2 = hi2 - lo2;
                 final var view2 = new ReadOnlyPartListView<>(data2, lo2, chunkSize2, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -897,7 +887,8 @@ public class PartitionableList<E> {
             final var hi2 = partIndex(partNum + 1, nChunks, dataSize2, nGhosts);
             final var chunkSize2 = hi2 - lo2;
             final var view2 = new ReadOnlyPartListView<>(data2, lo2, chunkSize2, nGhosts, partNum);
-            chunkTask.apply(view1, view2).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -929,25 +920,22 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
-                    ReadWritePartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T3>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, chunkTask);
     }
-
     private static <T1, T2, T3> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
-                    ReadWritePartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T3>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -984,7 +972,8 @@ public class PartitionableList<E> {
                 final var chunkSize3 = hi3 - lo3;
                 final var view3 = new ReadWritePartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -1006,7 +995,8 @@ public class PartitionableList<E> {
             final var hi3 = partIndex(partNum + 1, nChunks, dataSize3, nGhosts);
             final var chunkSize3 = hi3 - lo3;
             final var view3 = new ReadWritePartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -1046,25 +1036,22 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
-                    ReadWritePartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T3>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, chunkTask);
     }
-
     private static <T1, T2, T3> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
-                    ReadWritePartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T3>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -1101,7 +1088,8 @@ public class PartitionableList<E> {
                 final var chunkSize3 = hi3 - lo3;
                 final var view3 = new ReadWritePartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -1123,7 +1111,8 @@ public class PartitionableList<E> {
             final var hi3 = partIndex(partNum + 1, nChunks, dataSize3, nGhosts);
             final var chunkSize3 = hi3 - lo3;
             final var view3 = new ReadWritePartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -1163,25 +1152,22 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
-                    WriteOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T3>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, chunkTask);
     }
-
     private static <T1, T2, T3> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
-                    WriteOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T3>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -1218,7 +1204,8 @@ public class PartitionableList<E> {
                 final var chunkSize3 = hi3 - lo3;
                 final var view3 = new WriteOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -1240,7 +1227,8 @@ public class PartitionableList<E> {
             final var hi3 = partIndex(partNum + 1, nChunks, dataSize3, nGhosts);
             final var chunkSize3 = hi3 - lo3;
             final var view3 = new WriteOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -1280,25 +1268,22 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
-                    ReadWritePartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T3>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, chunkTask);
     }
-
     private static <T1, T2, T3> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
-                    ReadWritePartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T3>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -1335,7 +1320,8 @@ public class PartitionableList<E> {
                 final var chunkSize3 = hi3 - lo3;
                 final var view3 = new ReadWritePartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -1357,7 +1343,8 @@ public class PartitionableList<E> {
             final var hi3 = partIndex(partNum + 1, nChunks, dataSize3, nGhosts);
             final var chunkSize3 = hi3 - lo3;
             final var view3 = new ReadWritePartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -1397,25 +1384,22 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
-                    ReadWritePartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T3>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, chunkTask);
     }
-
     private static <T1, T2, T3> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
-                    ReadWritePartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T3>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -1452,7 +1436,8 @@ public class PartitionableList<E> {
                 final var chunkSize3 = hi3 - lo3;
                 final var view3 = new ReadWritePartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -1474,7 +1459,8 @@ public class PartitionableList<E> {
             final var hi3 = partIndex(partNum + 1, nChunks, dataSize3, nGhosts);
             final var chunkSize3 = hi3 - lo3;
             final var view3 = new ReadWritePartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -1514,25 +1500,22 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
-                    WriteOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T3>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, chunkTask);
     }
-
     private static <T1, T2, T3> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
-                    WriteOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T3>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -1569,7 +1552,8 @@ public class PartitionableList<E> {
                 final var chunkSize3 = hi3 - lo3;
                 final var view3 = new WriteOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -1591,7 +1575,8 @@ public class PartitionableList<E> {
             final var hi3 = partIndex(partNum + 1, nChunks, dataSize3, nGhosts);
             final var chunkSize3 = hi3 - lo3;
             final var view3 = new WriteOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -1631,25 +1616,22 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
-                    WriteOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T3>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, chunkTask);
     }
-
     private static <T1, T2, T3> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
-                    WriteOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T3>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -1686,7 +1668,8 @@ public class PartitionableList<E> {
                 final var chunkSize3 = hi3 - lo3;
                 final var view3 = new WriteOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -1708,7 +1691,8 @@ public class PartitionableList<E> {
             final var hi3 = partIndex(partNum + 1, nChunks, dataSize3, nGhosts);
             final var chunkSize3 = hi3 - lo3;
             final var view3 = new WriteOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -1748,25 +1732,22 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
-                    WriteOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T3>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, chunkTask);
     }
-
     public static <T1, T2, T3> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
-                    WriteOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T3>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -1803,7 +1784,8 @@ public class PartitionableList<E> {
                 final var chunkSize3 = hi3 - lo3;
                 final var view3 = new WriteOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -1825,7 +1807,8 @@ public class PartitionableList<E> {
             final var hi3 = partIndex(partNum + 1, nChunks, dataSize3, nGhosts);
             final var chunkSize3 = hi3 - lo3;
             final var view3 = new WriteOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -1865,25 +1848,22 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
-                    ReadWritePartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T3>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, chunkTask);
     }
-
     private static <T1, T2, T3> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
-                    ReadWritePartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T3>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -1920,7 +1900,8 @@ public class PartitionableList<E> {
                 final var chunkSize3 = hi3 - lo3;
                 final var view3 = new ReadWritePartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -1942,7 +1923,8 @@ public class PartitionableList<E> {
             final var hi3 = partIndex(partNum + 1, nChunks, dataSize3, nGhosts);
             final var chunkSize3 = hi3 - lo3;
             final var view3 = new ReadWritePartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -1982,25 +1964,22 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
-                    ReadWritePartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T3>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, chunkTask);
     }
-
     private static <T1, T2, T3> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
-                    ReadWritePartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T3>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -2037,7 +2016,8 @@ public class PartitionableList<E> {
                 final var chunkSize3 = hi3 - lo3;
                 final var view3 = new ReadWritePartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -2059,7 +2039,8 @@ public class PartitionableList<E> {
             final var hi3 = partIndex(partNum + 1, nChunks, dataSize3, nGhosts);
             final var chunkSize3 = hi3 - lo3;
             final var view3 = new ReadWritePartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -2099,25 +2080,22 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
-                    ReadOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T3>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, chunkTask);
     }
-
     private static <T1, T2, T3> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
-                    ReadOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T3>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -2154,7 +2132,8 @@ public class PartitionableList<E> {
                 final var chunkSize3 = hi3 - lo3;
                 final var view3 = new ReadOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -2176,7 +2155,8 @@ public class PartitionableList<E> {
             final var hi3 = partIndex(partNum + 1, nChunks, dataSize3, nGhosts);
             final var chunkSize3 = hi3 - lo3;
             final var view3 = new ReadOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -2216,25 +2196,22 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
-                    ReadWritePartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T3>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, chunkTask);
     }
-
     private static <T1, T2, T3> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
-                    ReadWritePartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T3>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -2271,7 +2248,8 @@ public class PartitionableList<E> {
                 final var chunkSize3 = hi3 - lo3;
                 final var view3 = new ReadWritePartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -2293,7 +2271,8 @@ public class PartitionableList<E> {
             final var hi3 = partIndex(partNum + 1, nChunks, dataSize3, nGhosts);
             final var chunkSize3 = hi3 - lo3;
             final var view3 = new ReadWritePartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -2333,25 +2312,22 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
-                    WriteOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T3>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, chunkTask);
     }
-
     private static <T1, T2, T3> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
-                    WriteOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T3>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -2388,7 +2364,8 @@ public class PartitionableList<E> {
                 final var chunkSize3 = hi3 - lo3;
                 final var view3 = new WriteOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -2410,7 +2387,8 @@ public class PartitionableList<E> {
             final var hi3 = partIndex(partNum + 1, nChunks, dataSize3, nGhosts);
             final var chunkSize3 = hi3 - lo3;
             final var view3 = new WriteOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -2450,25 +2428,22 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
-                    ReadOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T3>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, chunkTask);
     }
-
     private static <T1, T2, T3> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
-                    ReadOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T3>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -2505,7 +2480,8 @@ public class PartitionableList<E> {
                 final var chunkSize3 = hi3 - lo3;
                 final var view3 = new ReadOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -2527,7 +2503,8 @@ public class PartitionableList<E> {
             final var hi3 = partIndex(partNum + 1, nChunks, dataSize3, nGhosts);
             final var chunkSize3 = hi3 - lo3;
             final var view3 = new ReadOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -2567,25 +2544,22 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
-                    ReadWritePartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T3>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, chunkTask);
     }
-
     private static <T1, T2, T3> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
-                    ReadWritePartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T3>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -2622,7 +2596,8 @@ public class PartitionableList<E> {
                 final var chunkSize3 = hi3 - lo3;
                 final var view3 = new ReadWritePartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -2644,7 +2619,8 @@ public class PartitionableList<E> {
             final var hi3 = partIndex(partNum + 1, nChunks, dataSize3, nGhosts);
             final var chunkSize3 = hi3 - lo3;
             final var view3 = new ReadWritePartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -2684,25 +2660,22 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
-                    WriteOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T3>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, chunkTask);
     }
-
     private static <T1, T2, T3> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
-                    WriteOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T3>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -2739,7 +2712,8 @@ public class PartitionableList<E> {
                 final var chunkSize3 = hi3 - lo3;
                 final var view3 = new WriteOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -2761,7 +2735,8 @@ public class PartitionableList<E> {
             final var hi3 = partIndex(partNum + 1, nChunks, dataSize3, nGhosts);
             final var chunkSize3 = hi3 - lo3;
             final var view3 = new WriteOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -2801,25 +2776,22 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
-                    ReadOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T3>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, chunkTask);
     }
-
     private static <T1, T2, T3> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
-                    ReadOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T3>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -2856,7 +2828,8 @@ public class PartitionableList<E> {
                 final var chunkSize3 = hi3 - lo3;
                 final var view3 = new ReadOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -2878,7 +2851,8 @@ public class PartitionableList<E> {
             final var hi3 = partIndex(partNum + 1, nChunks, dataSize3, nGhosts);
             final var chunkSize3 = hi3 - lo3;
             final var view3 = new ReadOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -2918,25 +2892,22 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
-                    WriteOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T3>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, chunkTask);
     }
-
     public static <T1, T2, T3> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
-                    WriteOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T3>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -2973,7 +2944,8 @@ public class PartitionableList<E> {
                 final var chunkSize3 = hi3 - lo3;
                 final var view3 = new WriteOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -2995,7 +2967,8 @@ public class PartitionableList<E> {
             final var hi3 = partIndex(partNum + 1, nChunks, dataSize3, nGhosts);
             final var chunkSize3 = hi3 - lo3;
             final var view3 = new WriteOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -3035,25 +3008,22 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
-                    ReadOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T3>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, chunkTask);
     }
-
     public static <T1, T2, T3> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
-                    ReadOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T3>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -3090,7 +3060,8 @@ public class PartitionableList<E> {
                 final var chunkSize3 = hi3 - lo3;
                 final var view3 = new ReadOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -3112,7 +3083,8 @@ public class PartitionableList<E> {
             final var hi3 = partIndex(partNum + 1, nChunks, dataSize3, nGhosts);
             final var chunkSize3 = hi3 - lo3;
             final var view3 = new ReadOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -3152,25 +3124,22 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
-                    WriteOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T3>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, chunkTask);
     }
-
     public static <T1, T2, T3> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
-                    WriteOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T3>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -3207,7 +3176,8 @@ public class PartitionableList<E> {
                 final var chunkSize3 = hi3 - lo3;
                 final var view3 = new WriteOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -3229,7 +3199,8 @@ public class PartitionableList<E> {
             final var hi3 = partIndex(partNum + 1, nChunks, dataSize3, nGhosts);
             final var chunkSize3 = hi3 - lo3;
             final var view3 = new WriteOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -3269,25 +3240,22 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
-                    ReadOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T3>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, chunkTask);
     }
-
     private static <T1, T2, T3> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
-                    ReadOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T3>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -3324,7 +3292,8 @@ public class PartitionableList<E> {
                 final var chunkSize3 = hi3 - lo3;
                 final var view3 = new ReadOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -3346,7 +3315,8 @@ public class PartitionableList<E> {
             final var hi3 = partIndex(partNum + 1, nChunks, dataSize3, nGhosts);
             final var chunkSize3 = hi3 - lo3;
             final var view3 = new ReadOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -3386,25 +3356,22 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
-                    ReadOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T3>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, chunkTask);
     }
-
     private static <T1, T2, T3> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
-                    ReadOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T3>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -3441,7 +3408,8 @@ public class PartitionableList<E> {
                 final var chunkSize3 = hi3 - lo3;
                 final var view3 = new ReadOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -3463,7 +3431,8 @@ public class PartitionableList<E> {
             final var hi3 = partIndex(partNum + 1, nChunks, dataSize3, nGhosts);
             final var chunkSize3 = hi3 - lo3;
             final var view3 = new ReadOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -3503,25 +3472,22 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
-                    ReadWritePartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T3>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, chunkTask);
     }
-
     private static <T1, T2, T3> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
-                    ReadWritePartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T3>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -3558,7 +3524,8 @@ public class PartitionableList<E> {
                 final var chunkSize3 = hi3 - lo3;
                 final var view3 = new ReadWritePartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -3580,7 +3547,8 @@ public class PartitionableList<E> {
             final var hi3 = partIndex(partNum + 1, nChunks, dataSize3, nGhosts);
             final var chunkSize3 = hi3 - lo3;
             final var view3 = new ReadWritePartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -3620,25 +3588,22 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
-                    ReadOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T3>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, chunkTask);
     }
-
     public static <T1, T2, T3> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
-                    ReadOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T3>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -3675,7 +3640,8 @@ public class PartitionableList<E> {
                 final var chunkSize3 = hi3 - lo3;
                 final var view3 = new ReadOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -3697,7 +3663,8 @@ public class PartitionableList<E> {
             final var hi3 = partIndex(partNum + 1, nChunks, dataSize3, nGhosts);
             final var chunkSize3 = hi3 - lo3;
             final var view3 = new ReadOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -3737,25 +3704,22 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
-                    WriteOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T3>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, chunkTask);
     }
-
     public static <T1, T2, T3> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
-                    WriteOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T3>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -3792,7 +3756,8 @@ public class PartitionableList<E> {
                 final var chunkSize3 = hi3 - lo3;
                 final var view3 = new WriteOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -3814,7 +3779,8 @@ public class PartitionableList<E> {
             final var hi3 = partIndex(partNum + 1, nChunks, dataSize3, nGhosts);
             final var chunkSize3 = hi3 - lo3;
             final var view3 = new WriteOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -3854,25 +3820,22 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
-                    ReadOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T3>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, chunkTask);
     }
-
     public static <T1, T2, T3> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
-                    ReadOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T3>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -3909,7 +3872,8 @@ public class PartitionableList<E> {
                 final var chunkSize3 = hi3 - lo3;
                 final var view3 = new ReadOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -3931,7 +3895,8 @@ public class PartitionableList<E> {
             final var hi3 = partIndex(partNum + 1, nChunks, dataSize3, nGhosts);
             final var chunkSize3 = hi3 - lo3;
             final var view3 = new ReadOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -3971,25 +3936,22 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
-                    ReadOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T3>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, chunkTask);
     }
-
     public static <T1, T2, T3> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
-            PartTask3<
+            VoidPartTask3<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
-                    ReadOnlyPartListView<T3>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T3>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -4026,7 +3988,8 @@ public class PartitionableList<E> {
                 final var chunkSize3 = hi3 - lo3;
                 final var view3 = new ReadOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -4048,7 +4011,8 @@ public class PartitionableList<E> {
             final var hi3 = partIndex(partNum + 1, nChunks, dataSize3, nGhosts);
             final var chunkSize3 = hi3 - lo3;
             final var view3 = new ReadOnlyPartListView<>(data3, lo3, chunkSize3, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -4089,28 +4053,25 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -4155,7 +4116,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -4183,7 +4145,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -4232,28 +4195,25 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -4298,7 +4258,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -4326,7 +4287,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -4375,28 +4337,25 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -4441,7 +4400,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -4469,7 +4429,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -4518,28 +4479,25 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -4584,7 +4542,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -4612,7 +4571,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -4661,28 +4621,25 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -4727,7 +4684,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -4755,7 +4713,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -4804,28 +4763,25 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -4870,7 +4826,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -4898,7 +4855,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -4947,28 +4905,25 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -5013,7 +4968,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -5041,7 +4997,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -5090,28 +5047,25 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -5156,7 +5110,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -5184,7 +5139,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -5233,28 +5189,25 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -5299,7 +5252,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -5327,7 +5281,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -5376,28 +5331,25 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -5442,7 +5394,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -5470,7 +5423,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -5519,28 +5473,25 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -5585,7 +5536,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -5613,7 +5565,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -5662,28 +5615,25 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -5728,7 +5678,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -5756,7 +5707,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -5805,28 +5757,25 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -5871,7 +5820,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -5899,7 +5849,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -5948,28 +5899,25 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -6014,7 +5962,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -6042,7 +5991,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -6091,28 +6041,25 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -6157,7 +6104,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -6185,7 +6133,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -6234,28 +6183,25 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     public static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -6300,7 +6246,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -6328,7 +6275,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -6377,28 +6325,25 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -6443,7 +6388,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -6471,7 +6417,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -6520,28 +6467,25 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -6586,7 +6530,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -6614,7 +6559,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -6663,28 +6609,25 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -6729,7 +6672,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -6757,7 +6701,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -6806,28 +6751,25 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -6872,7 +6814,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -6900,7 +6843,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -6949,28 +6893,25 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -7015,7 +6956,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -7043,7 +6985,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -7092,28 +7035,25 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -7158,7 +7098,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -7186,7 +7127,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -7235,28 +7177,25 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -7301,7 +7240,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -7329,7 +7269,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -7378,28 +7319,25 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -7444,7 +7382,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -7472,7 +7411,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -7521,28 +7461,25 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -7587,7 +7524,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -7615,7 +7553,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -7664,28 +7603,25 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -7730,7 +7666,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -7758,7 +7695,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -7807,28 +7745,25 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -7873,7 +7808,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -7901,7 +7837,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -7950,28 +7887,25 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -8016,7 +7950,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -8044,7 +7979,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -8093,28 +8029,25 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -8159,7 +8092,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -8187,7 +8121,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -8236,28 +8171,25 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -8302,7 +8234,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -8330,7 +8263,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -8379,28 +8313,25 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -8445,7 +8376,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -8473,7 +8405,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -8522,28 +8455,25 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -8588,7 +8518,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -8616,7 +8547,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -8665,28 +8597,25 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -8731,7 +8660,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -8759,7 +8689,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -8808,28 +8739,25 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -8874,7 +8802,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -8902,7 +8831,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -8951,28 +8881,25 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -9017,7 +8944,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -9045,7 +8973,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -9094,28 +9023,25 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -9160,7 +9086,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -9188,7 +9115,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -9237,28 +9165,25 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -9303,7 +9228,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -9331,7 +9257,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -9380,28 +9307,25 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -9446,7 +9370,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -9474,7 +9399,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -9523,28 +9449,25 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -9589,7 +9512,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -9617,7 +9541,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -9666,28 +9591,25 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -9732,7 +9654,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -9760,7 +9683,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -9809,28 +9733,25 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -9875,7 +9796,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -9903,7 +9825,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -9952,28 +9875,25 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -10018,7 +9938,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -10046,7 +9967,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -10095,28 +10017,25 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -10161,7 +10080,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -10189,7 +10109,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -10238,28 +10159,25 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -10304,7 +10222,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -10332,7 +10251,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -10381,28 +10301,25 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     public static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -10447,7 +10364,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -10475,7 +10393,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -10524,28 +10443,25 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     public static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -10590,7 +10506,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -10618,7 +10535,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -10667,28 +10585,25 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     public static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -10733,7 +10648,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -10761,7 +10677,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -10810,28 +10727,25 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     public static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -10876,7 +10790,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -10904,7 +10819,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -10953,28 +10869,25 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -11019,7 +10932,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -11047,7 +10961,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -11096,28 +11011,25 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -11162,7 +11074,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -11190,7 +11103,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -11239,28 +11153,25 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -11305,7 +11216,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -11333,7 +11245,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -11382,28 +11295,25 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -11448,7 +11358,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -11476,7 +11387,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -11525,28 +11437,25 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -11591,7 +11500,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -11619,7 +11529,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -11668,28 +11579,25 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -11734,7 +11642,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -11762,7 +11671,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -11811,28 +11721,25 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -11877,7 +11784,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -11905,7 +11813,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -11954,28 +11863,25 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -12020,7 +11926,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -12048,7 +11955,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -12097,28 +12005,25 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -12163,7 +12068,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -12191,7 +12097,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -12240,28 +12147,25 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -12306,7 +12210,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -12334,7 +12239,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -12383,28 +12289,25 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -12449,7 +12352,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -12477,7 +12381,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -12526,28 +12431,25 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -12592,7 +12494,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -12620,7 +12523,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -12669,28 +12573,25 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -12735,7 +12636,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -12763,7 +12665,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -12812,28 +12715,25 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -12878,7 +12778,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -12906,7 +12807,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -12955,28 +12857,25 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -13021,7 +12920,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -13049,7 +12949,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -13098,28 +12999,25 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -13164,7 +13062,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -13192,7 +13091,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -13241,28 +13141,25 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -13307,7 +13204,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -13335,7 +13233,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -13384,28 +13283,25 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -13450,7 +13346,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -13478,7 +13375,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -13527,28 +13425,25 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     public static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -13593,7 +13488,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -13621,7 +13517,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -13670,28 +13567,25 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     public static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -13736,7 +13630,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -13764,7 +13659,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -13813,28 +13709,25 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     public static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -13879,7 +13772,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -13907,7 +13801,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -13956,28 +13851,25 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     public static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -14022,7 +13914,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -14050,7 +13943,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -14099,28 +13993,25 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     public static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -14165,7 +14056,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -14193,7 +14085,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -14242,28 +14135,25 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     public static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -14308,7 +14198,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -14336,7 +14227,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -14385,28 +14277,25 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -14451,7 +14340,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -14479,7 +14369,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -14528,28 +14419,25 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -14594,7 +14482,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -14622,7 +14511,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -14671,28 +14561,25 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             ReadWritePartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -14737,7 +14624,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -14765,7 +14653,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -14814,28 +14703,25 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     private static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadWritePartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -14880,7 +14766,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -14908,7 +14795,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadWritePartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -14957,28 +14845,25 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     public static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    WriteOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -15023,7 +14908,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -15051,7 +14937,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new WriteOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -15100,28 +14987,25 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     public static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             WriteOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -15166,7 +15050,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -15194,7 +15079,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -15243,28 +15129,25 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     public static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -15309,7 +15192,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -15337,7 +15221,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -15386,28 +15271,25 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     public static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -15452,7 +15334,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -15480,7 +15363,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -15529,28 +15413,25 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, chunkTask);
     }
-
     public static <T1, T2, T3, T4> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
             ReadOnlyPartIntent<T2> pi2,
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
-            PartTask4<
+            VoidPartTask4<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
-                    ReadOnlyPartListView<T4>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T4>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -15595,7 +15476,8 @@ public class PartitionableList<E> {
                 final var chunkSize4 = hi4 - lo4;
                 final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -15623,7 +15505,8 @@ public class PartitionableList<E> {
             final var hi4 = partIndex(partNum + 1, nChunks, dataSize4, nGhosts);
             final var chunkSize4 = hi4 - lo4;
             final var view4 = new ReadOnlyPartListView<>(data4, lo4, chunkSize4, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -15673,17 +15556,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -15691,13 +15572,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -15750,7 +15630,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -15784,7 +15665,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -15842,17 +15724,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -15860,13 +15740,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -15919,7 +15798,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -15953,7 +15833,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -16011,17 +15892,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -16029,13 +15908,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -16088,7 +15966,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -16122,7 +16001,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -16180,17 +16060,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -16198,13 +16076,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -16257,7 +16134,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -16291,7 +16169,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -16349,17 +16228,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -16367,13 +16244,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -16426,7 +16302,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -16460,7 +16337,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -16518,17 +16396,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -16536,13 +16412,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -16595,7 +16470,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -16629,7 +16505,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -16687,17 +16564,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -16705,13 +16580,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -16764,7 +16638,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -16798,7 +16673,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -16856,17 +16732,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -16874,13 +16748,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -16933,7 +16806,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -16967,7 +16841,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -17025,17 +16900,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -17043,13 +16916,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -17102,7 +16974,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -17136,7 +17009,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -17194,17 +17068,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -17212,13 +17084,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -17271,7 +17142,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -17305,7 +17177,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -17363,17 +17236,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -17381,13 +17252,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -17440,7 +17310,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -17474,7 +17345,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -17532,17 +17404,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -17550,13 +17420,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -17609,7 +17478,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -17643,7 +17513,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -17701,17 +17572,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -17719,13 +17588,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -17778,7 +17646,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -17812,7 +17681,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -17870,17 +17740,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -17888,13 +17756,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -17947,7 +17814,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -17981,7 +17849,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -18039,17 +17908,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -18057,13 +17924,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -18116,7 +17982,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -18150,7 +18017,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -18208,17 +18076,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -18226,13 +18092,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -18285,7 +18150,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -18319,7 +18185,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -18377,17 +18244,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -18395,13 +18260,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -18454,7 +18318,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -18488,7 +18353,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -18546,17 +18412,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -18564,13 +18428,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -18623,7 +18486,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -18657,7 +18521,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -18715,17 +18580,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -18733,13 +18596,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -18792,7 +18654,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -18826,7 +18689,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -18884,17 +18748,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -18902,13 +18764,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -18961,7 +18822,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -18995,7 +18857,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -19053,17 +18916,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -19071,13 +18932,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -19130,7 +18990,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -19164,7 +19025,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -19222,17 +19084,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -19240,13 +19100,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -19299,7 +19158,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -19333,7 +19193,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -19391,17 +19252,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -19409,13 +19268,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -19468,7 +19326,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -19502,7 +19361,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -19560,17 +19420,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -19578,13 +19436,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -19637,7 +19494,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -19671,7 +19529,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -19729,17 +19588,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -19747,13 +19604,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -19806,7 +19662,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -19840,7 +19697,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -19898,17 +19756,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -19916,13 +19772,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -19975,7 +19830,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -20009,7 +19865,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -20067,17 +19924,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -20085,13 +19940,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -20144,7 +19998,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -20178,7 +20033,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -20236,17 +20092,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -20254,13 +20108,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -20313,7 +20166,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -20347,7 +20201,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -20405,17 +20260,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -20423,13 +20276,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -20482,7 +20334,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -20516,7 +20369,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -20574,17 +20428,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -20592,13 +20444,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -20651,7 +20502,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -20685,7 +20537,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -20743,17 +20596,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -20761,13 +20612,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -20820,7 +20670,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -20854,7 +20705,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -20912,17 +20764,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -20930,13 +20780,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -20989,7 +20838,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -21023,7 +20873,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -21081,17 +20932,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -21099,13 +20948,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -21158,7 +21006,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -21192,7 +21041,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -21250,17 +21100,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -21268,13 +21116,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -21327,7 +21174,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -21361,7 +21209,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -21419,17 +21268,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -21437,13 +21284,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -21496,7 +21342,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -21530,7 +21377,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -21588,17 +21436,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -21606,13 +21452,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -21665,7 +21510,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -21699,7 +21545,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -21757,17 +21604,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -21775,13 +21620,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -21834,7 +21678,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -21868,7 +21713,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -21926,17 +21772,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -21944,13 +21788,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -22003,7 +21846,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -22037,7 +21881,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -22095,17 +21940,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -22113,13 +21956,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -22172,7 +22014,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -22206,7 +22049,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -22264,17 +22108,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -22282,13 +22124,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -22341,7 +22182,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -22375,7 +22217,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -22433,17 +22276,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -22451,13 +22292,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -22510,7 +22350,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -22544,7 +22385,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -22602,17 +22444,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -22620,13 +22460,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -22679,7 +22518,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -22713,7 +22553,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -22771,17 +22612,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -22789,13 +22628,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -22848,7 +22686,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -22882,7 +22721,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -22940,17 +22780,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -22958,13 +22796,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -23017,7 +22854,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -23051,7 +22889,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -23109,17 +22948,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -23127,13 +22964,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -23186,7 +23022,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -23220,7 +23057,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -23278,17 +23116,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -23296,13 +23132,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -23355,7 +23190,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -23389,7 +23225,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -23447,17 +23284,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -23465,13 +23300,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -23524,7 +23358,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -23558,7 +23393,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -23616,17 +23452,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -23634,13 +23468,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -23693,7 +23526,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -23727,7 +23561,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -23785,17 +23620,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -23803,13 +23636,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -23862,7 +23694,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -23896,7 +23729,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -23954,17 +23788,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -23972,13 +23804,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -24031,7 +23862,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -24065,7 +23897,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -24123,17 +23956,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -24141,13 +23972,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -24200,7 +24030,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -24234,7 +24065,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -24292,17 +24124,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -24310,13 +24140,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -24369,7 +24198,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -24403,7 +24233,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -24461,17 +24292,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -24479,13 +24308,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -24538,7 +24366,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -24572,7 +24401,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -24630,17 +24460,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -24648,13 +24476,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -24707,7 +24534,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -24741,7 +24569,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -24799,17 +24628,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -24817,13 +24644,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -24876,7 +24702,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -24910,7 +24737,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -24968,17 +24796,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -24986,13 +24812,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -25045,7 +24870,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -25079,7 +24905,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -25137,17 +24964,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -25155,13 +24980,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -25214,7 +25038,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -25248,7 +25073,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -25306,17 +25132,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -25324,13 +25148,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -25383,7 +25206,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -25417,7 +25241,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -25475,17 +25300,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -25493,13 +25316,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -25552,7 +25374,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -25586,7 +25409,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -25644,17 +25468,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -25662,13 +25484,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -25721,7 +25542,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -25755,7 +25577,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -25813,17 +25636,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -25831,13 +25652,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -25890,7 +25710,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -25924,7 +25745,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -25982,17 +25804,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -26000,13 +25820,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -26059,7 +25878,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -26093,7 +25913,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -26151,17 +25972,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -26169,13 +25988,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -26228,7 +26046,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -26262,7 +26081,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -26320,17 +26140,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -26338,13 +26156,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -26397,7 +26214,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -26431,7 +26249,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -26489,17 +26308,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -26507,13 +26324,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -26566,7 +26382,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -26600,7 +26417,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -26658,17 +26476,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -26676,13 +26492,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -26735,7 +26550,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -26769,7 +26585,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -26827,17 +26644,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -26845,13 +26660,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -26904,7 +26718,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -26938,7 +26753,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -26996,17 +26812,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -27014,13 +26828,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -27073,7 +26886,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -27107,7 +26921,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -27165,17 +26980,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -27183,13 +26996,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -27242,7 +27054,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -27276,7 +27089,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -27334,17 +27148,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -27352,13 +27164,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -27411,7 +27222,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -27445,7 +27257,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -27503,17 +27316,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -27521,13 +27332,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -27580,7 +27390,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -27614,7 +27425,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -27672,17 +27484,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -27690,13 +27500,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -27749,7 +27558,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -27783,7 +27593,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -27841,17 +27652,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -27859,13 +27668,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -27918,7 +27726,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -27952,7 +27761,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -28010,17 +27820,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -28028,13 +27836,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -28087,7 +27894,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -28121,7 +27929,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -28179,17 +27988,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -28197,13 +28004,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -28256,7 +28062,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -28290,7 +28097,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -28348,17 +28156,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -28366,13 +28172,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -28425,7 +28230,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -28459,7 +28265,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -28517,17 +28324,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -28535,13 +28340,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -28594,7 +28398,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -28628,7 +28433,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -28686,17 +28492,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -28704,13 +28508,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -28763,7 +28566,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -28797,7 +28601,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -28855,17 +28660,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -28873,13 +28676,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -28932,7 +28734,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -28966,7 +28769,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -29024,17 +28828,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -29042,13 +28844,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -29101,7 +28902,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -29135,7 +28937,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -29193,17 +28996,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -29211,13 +29012,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -29270,7 +29070,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -29304,7 +29105,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -29362,17 +29164,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -29380,13 +29180,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -29439,7 +29238,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -29473,7 +29273,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -29531,17 +29332,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -29549,13 +29348,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -29608,7 +29406,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -29642,7 +29441,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -29700,17 +29500,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -29718,13 +29516,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -29777,7 +29574,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -29811,7 +29609,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -29869,17 +29668,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -29887,13 +29684,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -29946,7 +29742,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -29980,7 +29777,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -30038,17 +29836,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -30056,13 +29852,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -30115,7 +29910,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -30149,7 +29945,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -30207,17 +30004,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -30225,13 +30020,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -30284,7 +30078,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -30318,7 +30113,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -30376,17 +30172,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -30394,13 +30188,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -30453,7 +30246,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -30487,7 +30281,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -30545,17 +30340,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -30563,13 +30356,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -30622,7 +30414,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -30656,7 +30449,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -30714,17 +30508,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -30732,13 +30524,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -30791,7 +30582,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -30825,7 +30617,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -30883,17 +30676,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -30901,13 +30692,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -30960,7 +30750,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -30994,7 +30785,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -31052,17 +30844,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -31070,13 +30860,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -31129,7 +30918,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -31163,7 +30953,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -31221,17 +31012,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -31239,13 +31028,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -31298,7 +31086,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -31332,7 +31121,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -31390,17 +31180,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -31408,13 +31196,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -31467,7 +31254,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -31501,7 +31289,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -31559,17 +31348,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -31577,13 +31364,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -31636,7 +31422,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -31670,7 +31457,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -31728,17 +31516,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -31746,13 +31532,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -31805,7 +31590,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -31839,7 +31625,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -31897,17 +31684,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -31915,13 +31700,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -31974,7 +31758,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -32008,7 +31793,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -32066,17 +31852,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -32084,13 +31868,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -32143,7 +31926,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -32177,7 +31961,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -32235,17 +32020,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -32253,13 +32036,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -32312,7 +32094,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -32346,7 +32129,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -32404,17 +32188,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -32422,13 +32204,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -32481,7 +32262,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -32515,7 +32297,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -32573,17 +32356,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -32591,13 +32372,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -32650,7 +32430,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -32684,7 +32465,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -32742,17 +32524,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -32760,13 +32540,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -32819,7 +32598,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -32853,7 +32633,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -32911,17 +32692,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -32929,13 +32708,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -32988,7 +32766,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -33022,7 +32801,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -33080,17 +32860,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -33098,13 +32876,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -33157,7 +32934,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -33191,7 +32969,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -33249,17 +33028,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -33267,13 +33044,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -33326,7 +33102,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -33360,7 +33137,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -33418,17 +33196,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -33436,13 +33212,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -33495,7 +33270,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -33529,7 +33305,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -33587,17 +33364,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -33605,13 +33380,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -33664,7 +33438,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -33698,7 +33473,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -33756,17 +33532,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -33774,13 +33548,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -33833,7 +33606,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -33867,7 +33641,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -33925,17 +33700,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -33943,13 +33716,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -34002,7 +33774,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -34036,7 +33809,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -34094,17 +33868,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -34112,13 +33884,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -34171,7 +33942,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -34205,7 +33977,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -34263,17 +34036,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -34281,13 +34052,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -34340,7 +34110,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -34374,7 +34145,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -34432,17 +34204,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -34450,13 +34220,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -34509,7 +34278,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -34543,7 +34313,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -34601,17 +34372,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -34619,13 +34388,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -34678,7 +34446,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -34712,7 +34481,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -34770,17 +34540,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -34788,13 +34556,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -34847,7 +34614,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -34881,7 +34649,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -34939,17 +34708,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -34957,13 +34724,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -35016,7 +34782,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -35050,7 +34817,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -35108,17 +34876,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -35126,13 +34892,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -35185,7 +34950,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -35219,7 +34985,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -35277,17 +35044,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -35295,13 +35060,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -35354,7 +35118,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -35388,7 +35153,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -35446,17 +35212,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -35464,13 +35228,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -35523,7 +35286,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -35557,7 +35321,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -35615,17 +35380,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -35633,13 +35396,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -35692,7 +35454,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -35726,7 +35489,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -35784,17 +35548,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -35802,13 +35564,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -35861,7 +35622,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -35895,7 +35657,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -35953,17 +35716,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -35971,13 +35732,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -36030,7 +35790,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -36064,7 +35825,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -36122,17 +35884,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -36140,13 +35900,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -36199,7 +35958,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -36233,7 +35993,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -36291,17 +36052,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -36309,13 +36068,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -36368,7 +36126,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -36402,7 +36161,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -36460,17 +36220,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -36478,13 +36236,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -36537,7 +36294,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -36571,7 +36329,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -36629,17 +36388,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -36647,13 +36404,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -36706,7 +36462,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -36740,7 +36497,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -36798,17 +36556,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -36816,13 +36572,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -36875,7 +36630,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -36909,7 +36665,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -36967,17 +36724,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -36985,13 +36740,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -37044,7 +36798,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -37078,7 +36833,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -37136,17 +36892,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -37154,13 +36908,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -37213,7 +36966,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -37247,7 +37001,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -37305,17 +37060,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -37323,13 +37076,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -37382,7 +37134,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -37416,7 +37169,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -37474,17 +37228,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -37492,13 +37244,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -37551,7 +37302,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -37585,7 +37337,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -37643,17 +37396,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -37661,13 +37412,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -37720,7 +37470,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -37754,7 +37505,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -37812,17 +37564,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -37830,13 +37580,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -37889,7 +37638,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -37923,7 +37673,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -37981,17 +37732,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -37999,13 +37748,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -38058,7 +37806,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -38092,7 +37841,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -38150,17 +37900,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -38168,13 +37916,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -38227,7 +37974,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -38261,7 +38009,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -38319,17 +38068,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -38337,13 +38084,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -38396,7 +38142,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -38430,7 +38177,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -38488,17 +38236,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -38506,13 +38252,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -38565,7 +38310,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -38599,7 +38345,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -38657,17 +38404,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -38675,13 +38420,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -38734,7 +38478,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -38768,7 +38513,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -38826,17 +38572,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -38844,13 +38588,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -38903,7 +38646,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -38937,7 +38681,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -38995,17 +38740,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -39013,13 +38756,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -39072,7 +38814,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -39106,7 +38849,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -39164,17 +38908,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -39182,13 +38924,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -39241,7 +38982,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -39275,7 +39017,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -39333,17 +39076,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -39351,13 +39092,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -39410,7 +39150,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -39444,7 +39185,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -39502,17 +39244,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -39520,13 +39260,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -39579,7 +39318,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -39613,7 +39353,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -39671,17 +39412,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -39689,13 +39428,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -39748,7 +39486,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -39782,7 +39521,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -39840,17 +39580,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -39858,13 +39596,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -39917,7 +39654,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -39951,7 +39689,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -40009,17 +39748,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -40027,13 +39764,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -40086,7 +39822,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -40120,7 +39857,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -40178,17 +39916,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -40196,13 +39932,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -40255,7 +39990,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -40289,7 +40025,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -40347,17 +40084,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -40365,13 +40100,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -40424,7 +40158,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -40458,7 +40193,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -40516,17 +40252,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -40534,13 +40268,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -40593,7 +40326,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -40627,7 +40361,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -40685,17 +40420,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -40703,13 +40436,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -40762,7 +40494,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -40796,7 +40529,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -40854,17 +40588,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -40872,13 +40604,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -40931,7 +40662,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -40965,7 +40697,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -41023,17 +40756,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -41041,13 +40772,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -41100,7 +40830,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -41134,7 +40865,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -41192,17 +40924,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -41210,13 +40940,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -41269,7 +40998,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -41303,7 +41033,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -41361,17 +41092,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -41379,13 +41108,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -41438,7 +41166,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -41472,7 +41201,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -41530,17 +41260,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -41548,13 +41276,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -41607,7 +41334,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -41641,7 +41369,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -41699,17 +41428,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -41717,13 +41444,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -41776,7 +41502,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -41810,7 +41537,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -41868,17 +41596,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -41886,13 +41612,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -41945,7 +41670,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -41979,7 +41705,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -42037,17 +41764,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -42055,13 +41780,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -42114,7 +41838,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -42148,7 +41873,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -42206,17 +41932,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -42224,13 +41948,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -42283,7 +42006,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -42317,7 +42041,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -42375,17 +42100,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -42393,13 +42116,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -42452,7 +42174,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -42486,7 +42209,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -42544,17 +42268,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -42562,13 +42284,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -42621,7 +42342,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -42655,7 +42377,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -42713,17 +42436,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -42731,13 +42452,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -42790,7 +42510,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -42824,7 +42545,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -42882,17 +42604,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -42900,13 +42620,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -42959,7 +42678,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -42993,7 +42713,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -43051,17 +42772,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -43069,13 +42788,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -43128,7 +42846,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -43162,7 +42881,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -43220,17 +42940,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -43238,13 +42956,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -43297,7 +43014,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -43331,7 +43049,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -43389,17 +43108,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -43407,13 +43124,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -43466,7 +43182,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -43500,7 +43217,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -43558,17 +43276,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -43576,13 +43292,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -43635,7 +43350,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -43669,7 +43385,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -43727,17 +43444,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -43745,13 +43460,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -43804,7 +43518,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -43838,7 +43553,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -43896,17 +43612,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -43914,13 +43628,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -43973,7 +43686,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -44007,7 +43721,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -44065,17 +43780,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -44083,13 +43796,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -44142,7 +43854,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -44176,7 +43889,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -44234,17 +43948,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -44252,13 +43964,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -44311,7 +44022,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -44345,7 +44057,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -44403,17 +44116,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -44421,13 +44132,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -44480,7 +44190,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -44514,7 +44225,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -44572,17 +44284,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -44590,13 +44300,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -44649,7 +44358,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -44683,7 +44393,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -44741,17 +44452,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -44759,13 +44468,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -44818,7 +44526,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -44852,7 +44561,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -44910,17 +44620,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -44928,13 +44636,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -44987,7 +44694,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -45021,7 +44729,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -45079,17 +44788,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -45097,13 +44804,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -45156,7 +44862,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -45190,7 +44897,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -45248,17 +44956,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -45266,13 +44972,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -45325,7 +45030,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -45359,7 +45065,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -45417,17 +45124,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -45435,13 +45140,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -45494,7 +45198,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -45528,7 +45233,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -45586,17 +45292,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -45604,13 +45308,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -45663,7 +45366,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -45697,7 +45401,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -45755,17 +45460,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -45773,13 +45476,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -45832,7 +45534,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -45866,7 +45569,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -45924,17 +45628,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -45942,13 +45644,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -46001,7 +45702,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -46035,7 +45737,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -46093,17 +45796,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -46111,13 +45812,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -46170,7 +45870,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -46204,7 +45905,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -46262,17 +45964,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -46280,13 +45980,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -46339,7 +46038,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -46373,7 +46073,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -46431,17 +46132,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -46449,13 +46148,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -46508,7 +46206,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -46542,7 +46241,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -46600,17 +46300,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -46618,13 +46316,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -46677,7 +46374,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -46711,7 +46409,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -46769,17 +46468,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -46787,13 +46484,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -46846,7 +46542,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -46880,7 +46577,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -46938,17 +46636,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -46956,13 +46652,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -47015,7 +46710,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -47049,7 +46745,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -47107,17 +46804,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -47125,13 +46820,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -47184,7 +46878,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -47218,7 +46913,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -47276,17 +46972,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -47294,13 +46988,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -47353,7 +47046,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -47387,7 +47081,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -47445,17 +47140,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -47463,13 +47156,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -47522,7 +47214,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -47556,7 +47249,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -47614,17 +47308,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -47632,13 +47324,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -47691,7 +47382,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -47725,7 +47417,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -47783,17 +47476,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -47801,13 +47492,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -47860,7 +47550,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -47894,7 +47585,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -47952,17 +47644,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -47970,13 +47660,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -48029,7 +47718,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -48063,7 +47753,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -48121,17 +47812,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -48139,13 +47828,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -48198,7 +47886,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -48232,7 +47921,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -48290,17 +47980,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -48308,13 +47996,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -48367,7 +48054,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -48401,7 +48089,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -48459,17 +48148,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -48477,13 +48164,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -48536,7 +48222,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -48570,7 +48257,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -48628,17 +48316,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -48646,13 +48332,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -48705,7 +48390,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -48739,7 +48425,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -48797,17 +48484,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -48815,13 +48500,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -48874,7 +48558,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -48908,7 +48593,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -48966,17 +48652,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -48984,13 +48668,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -49043,7 +48726,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -49077,7 +48761,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -49135,17 +48820,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -49153,13 +48836,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -49212,7 +48894,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -49246,7 +48929,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -49304,17 +48988,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -49322,13 +49004,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -49381,7 +49062,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -49415,7 +49097,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -49473,17 +49156,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -49491,13 +49172,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -49550,7 +49230,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -49584,7 +49265,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -49642,17 +49324,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -49660,13 +49340,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -49719,7 +49398,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -49753,7 +49433,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -49811,17 +49492,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -49829,13 +49508,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -49888,7 +49566,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -49922,7 +49601,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -49980,17 +49660,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -49998,13 +49676,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -50057,7 +49734,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -50091,7 +49769,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -50149,17 +49828,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -50167,13 +49844,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -50226,7 +49902,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -50260,7 +49937,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -50318,17 +49996,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -50336,13 +50012,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -50395,7 +50070,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -50429,7 +50105,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -50487,17 +50164,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -50505,13 +50180,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -50564,7 +50238,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -50598,7 +50273,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -50656,17 +50332,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -50674,13 +50348,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -50733,7 +50406,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -50767,7 +50441,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -50825,17 +50500,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -50843,13 +50516,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -50902,7 +50574,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -50936,7 +50609,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -50994,17 +50668,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -51012,13 +50684,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -51071,7 +50742,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -51105,7 +50777,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -51163,17 +50836,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -51181,13 +50852,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -51240,7 +50910,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -51274,7 +50945,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -51332,17 +51004,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -51350,13 +51020,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -51409,7 +51078,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -51443,7 +51113,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -51501,17 +51172,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -51519,13 +51188,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -51578,7 +51246,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -51612,7 +51281,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -51670,17 +51340,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -51688,13 +51356,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -51747,7 +51414,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -51781,7 +51449,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -51839,17 +51508,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -51857,13 +51524,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -51916,7 +51582,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -51950,7 +51617,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -52008,17 +51676,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -52026,13 +51692,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -52085,7 +51750,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -52119,7 +51785,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -52177,17 +51844,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -52195,13 +51860,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -52254,7 +51918,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -52288,7 +51953,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -52346,17 +52012,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -52364,13 +52028,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -52423,7 +52086,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -52457,7 +52121,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -52515,17 +52180,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -52533,13 +52196,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -52592,7 +52254,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -52626,7 +52289,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -52684,17 +52348,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -52702,13 +52364,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -52761,7 +52422,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -52795,7 +52457,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -52853,17 +52516,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -52871,13 +52532,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -52930,7 +52590,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -52964,7 +52625,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -53022,17 +52684,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -53040,13 +52700,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -53099,7 +52758,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -53133,7 +52793,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -53191,17 +52852,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -53209,13 +52868,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -53268,7 +52926,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -53302,7 +52961,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -53360,17 +53020,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -53378,13 +53036,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -53437,7 +53094,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -53471,7 +53129,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -53529,17 +53188,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -53547,13 +53204,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -53606,7 +53262,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -53640,7 +53297,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -53698,17 +53356,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -53716,13 +53372,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -53775,7 +53430,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -53809,7 +53465,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -53867,17 +53524,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -53885,13 +53540,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -53944,7 +53598,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -53978,7 +53633,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -54036,17 +53692,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -54054,13 +53708,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -54113,7 +53766,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -54147,7 +53801,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -54205,17 +53860,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -54223,13 +53876,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -54282,7 +53934,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -54316,7 +53969,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -54374,17 +54028,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -54392,13 +54044,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -54451,7 +54102,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -54485,7 +54137,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -54543,17 +54196,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -54561,13 +54212,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -54620,7 +54270,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -54654,7 +54305,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -54712,17 +54364,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -54730,13 +54380,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -54789,7 +54438,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -54823,7 +54473,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -54881,17 +54532,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadWritePartIntent<T1> pi1,
@@ -54899,13 +54548,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadWritePartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -54958,7 +54606,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -54992,7 +54641,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -55050,17 +54700,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -55068,13 +54716,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadWritePartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadWritePartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadWritePartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -55127,7 +54774,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -55161,7 +54809,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadWritePartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -55219,17 +54868,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -55237,13 +54884,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadWritePartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -55296,7 +54942,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -55330,7 +54977,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -55388,17 +55036,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -55406,13 +55052,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadWritePartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadWritePartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -55465,7 +55110,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -55499,7 +55145,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -55557,17 +55204,15 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     private static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -55575,13 +55220,12 @@ public class PartitionableList<E> {
             ReadWritePartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadWritePartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -55634,7 +55278,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -55668,7 +55313,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -55726,17 +55372,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             WriteOnlyPartIntent<T1> pi1,
@@ -55744,13 +55388,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     WriteOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -55803,7 +55446,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -55837,7 +55481,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -55895,17 +55540,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -55913,13 +55556,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     WriteOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -55972,7 +55614,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -56006,7 +55649,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -56064,17 +55708,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -56082,13 +55724,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             WriteOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     WriteOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -56141,7 +55782,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -56175,7 +55817,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -56233,17 +55876,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -56251,13 +55892,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             WriteOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    WriteOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    WriteOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -56310,7 +55950,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -56344,7 +55985,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new WriteOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -56402,17 +56044,15 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -56420,13 +56060,12 @@ public class PartitionableList<E> {
             WriteOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     WriteOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -56479,7 +56118,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -56513,7 +56153,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -56571,17 +56212,15 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         return runPartitioned(nChunks, 0, pi1, pi2, pi3, pi4, pi5, chunkTask);
     }
-
     public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runPartitioned(
             int nChunks, int nGhosts,
             ReadOnlyPartIntent<T1> pi1,
@@ -56589,13 +56228,12 @@ public class PartitionableList<E> {
             ReadOnlyPartIntent<T3> pi3,
             ReadOnlyPartIntent<T4> pi4,
             ReadOnlyPartIntent<T5> pi5,
-            PartTask5<
+            VoidPartTask5<
                     ReadOnlyPartListView<T1>,
                     ReadOnlyPartListView<T2>,
                     ReadOnlyPartListView<T3>,
                     ReadOnlyPartListView<T4>,
-                    ReadOnlyPartListView<T5>,
-                    CompletableFuture<Void>> chunkTask
+                    ReadOnlyPartListView<T5>> chunkTask
     ) {
         final var done = new CompletableFuture<Void>();
         final var tasksDone = new CountdownLatch(nChunks);
@@ -56648,7 +56286,8 @@ public class PartitionableList<E> {
                 final var chunkSize5 = hi5 - lo5;
                 final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
                 Pool.run(() -> {
-                    chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+                    chunkTask.run(view1, view2, view3, view4, view5);
+                    tasksDone.signal();
                 });
             }
             final var partNum = nChunks - 1;
@@ -56682,7 +56321,8 @@ public class PartitionableList<E> {
             final var hi5 = partIndex(partNum + 1, nChunks, dataSize5, nGhosts);
             final var chunkSize5 = hi5 - lo5;
             final var view5 = new ReadOnlyPartListView<>(data5, lo5, chunkSize5, nGhosts, partNum);
-            chunkTask.apply(view1, view2, view3, view4, view5).thenRun(tasksDone::signal);
+            chunkTask.run(view1, view2, view3, view4, view5);
+            tasksDone.signal();
             tasksDone.getFut().thenRun(() -> {
                 done.complete(null);
                 Guard.runGuarded(list1.busy, busy1_ -> {
@@ -56734,6 +56374,7 @@ public class PartitionableList<E> {
     }
 
 // endregion
+
 
 
     public CompletableFuture<Void> runPartitionedReadWrite(int nChunks,
