@@ -52,6 +52,19 @@ final var view${j} = new ${rw.1}PartListView<>(data${j}, lo${j}, chunkSize${j}, 
     }).join("\n\n")
 }
 
+fn mkViewInits2(rwList: list<string>) -> string {
+    (for rw in rwList.enumerate() {
+        let j = rw.0 + 1;
+        push ##
+final var data${j} = list${j}.data;
+final var lo${j} = ranges.getWritableBegin(partNum);
+final var hi${j} = ranges.getWritableEnd(partNum);
+final var chunkSize${j} = hi${j} - lo${j};
+final var view${j} = new ${rw.1}PartListView<>(data${j}, lo${j}, chunkSize${j}, nGhosts, partNum);
+        ##;
+    }).join("\n\n")
+}
+
 fn mkBusyFalseSetters(rwList: list<string>) -> string {
     (for rw in rwList.enumerate() {
         let j = rw.0 + 1;
@@ -121,6 +134,51 @@ Guard.runCondition(listsNotBusy, (${busyList.join(", ")}) -> {
     ##.trim();
 }
 
+fn mkRunCondition2(rwList: list<string>) -> string {
+    let busyList = ["busy${i}" | i in [1..=rwList.len()]];
+    let busyGetlist = ["${b}.get()" | b in busyList].join(" || ");
+    let busySetList = ["${b}.set(true);" | b in busyList].join("\n");
+    let viewList = ["view${i}" | i in [1..=rwList.len()]].join(", ");
+
+    return ##
+
+Guard.runCondition(listsNotBusy, (${busyList.join(", ")}) -> {
+    if (${busyGetlist}) {
+        return false;
+    }
+
+    ${busySetList}
+
+    begun.set(true);
+
+    for (int partNum = 0; partNum < ranges.numPartitions() - 1; partNum++) {
+        ${mkViewInits2(rwList)}
+
+        Pool.run(() -> {
+            chunkTask.run(${viewList});
+            tasksDone.signal();
+        });
+    }
+
+    final var partNum = ranges.numPartitions() - 1;
+
+    ${mkViewInits2(rwList)}
+
+    chunkTask.run(${viewList});
+    tasksDone.signal();
+
+    tasksDone.getFut().thenRun(() -> {
+        done.complete(null);
+
+        ${mkBusyFalseSetters(rwList)}
+    });
+
+    return true;
+});
+
+    ##.trim();
+}
+
 fn mkBody(rwList: list<string>) -> string {
     ##
 
@@ -134,6 +192,29 @@ ${mkListsNotBusyInit(rwList.len())}
 final var begun = new AtomicBoolean();
 
 ${mkRunCondition(rwList)}
+
+if (!begun.get()) {
+    ${mkNotBusySignalers(rwList)}
+}
+
+return done;
+
+    ##.trim()
+}
+
+fn mkBody2(rwList: list<string>) -> string {
+    ##
+
+final var done = new CompletableFuture<Void>();
+final var tasksDone = new CountdownLatch(ranges.numPartitions());
+
+${mkListInits(rwList.len())}
+
+${mkListsNotBusyInit(rwList.len())}
+
+final var begun = new AtomicBoolean();
+
+${mkRunCondition2(rwList)}
 
 if (!begun.get()) {
     ${mkNotBusySignalers(rwList)}
@@ -175,6 +256,35 @@ ${access} static <${tpList.join(', ')}> CompletableFuture<Void> runPartitioned(
     ${mkChunkTask(rwList)}
 ) {
     ${mkBody(rwList)}
+}
+
+        ##.trimMulti()
+    );
+    println("");
+
+    println(
+        ##
+public static <${tpList.join(', ')}> CompletableFuture<Void> runPartitioned(
+    PartitionRangeProvider ranges,
+    ${mkIntentArgs(rwList)},
+    ${mkChunkTask(rwList)}
+) {
+    return runPartitioned(ranges, 0, ${piList}, chunkTask);
+}
+
+        ##.trimMulti()
+    );
+    println("");
+
+    println(
+        ##
+
+${access} static <${tpList.join(', ')}> CompletableFuture<Void> runPartitioned(
+    PartitionRangeProvider ranges, int nGhosts,
+    ${mkIntentArgs(rwList)},
+    ${mkChunkTask(rwList)}
+) {
+    ${mkBody2(rwList)}
 }
 
         ##.trimMulti()

@@ -12,6 +12,13 @@ repositories {
 }
 
 sourceSets {
+    main {
+        java {
+            // Include generated sources directory
+            srcDir "$buildDir/generated/sources/javalineer/main/java"
+            // Exclusions for originals are added later based on codegenEntries
+        }
+    }
     tests {
         java {
             srcDir 'src/tests/java'
@@ -21,6 +28,91 @@ sourceSets {
 
 java {
     withSourcesJar()
+}
+
+// Generic code generation splice machinery
+// Configure codegen entries here: each is [name, targetFile, generatorScript, marker]
+ext.codegenEntries = [
+    [
+        name: 'generatePartitionableListOverloads',
+        target: 'src/main/java/edu/lsu/cct/javalineer/PartitionableList.java',
+        generator: 'scripts/Generate_runPartitioned.mj',
+        marker: '/* CODEGEN: generatePartitionableListOverloads */'
+    ]
+]
+
+def genSrcDir = file("$buildDir/generated/sources/javalineer/main/java")
+
+// Exclude original target files so the spliced versions are the ones compiled
+sourceSets.main.java {
+    codegenEntries.each { cfg ->
+        exclude { details ->
+            def ap = details.file.absolutePath.replace('\\','/')
+            def targetAbs = file(cfg.target).absolutePath.replace('\\','/')
+            ap == targetAbs
+        }
+    }
+}
+
+// Helper to compute output file under generated dir, mirroring package
+static File codegenOutputFor(Project project, File genSrcDir, File targetFile) {
+    def srcMainJava = new File(project.projectDir, 'src/main/java').absolutePath.replace('\\','/')
+    def targetAbs = targetFile.absolutePath.replace('\\','/')
+    if (!targetAbs.startsWith(srcMainJava)) {
+        throw new GradleException("Target must be under src/main/java: ${targetFile}")
+    }
+    def rel = targetAbs.substring(srcMainJava.length() + 1)
+    return new File(genSrcDir, rel)
+}
+
+// Register a task per entry
+codegenEntries.each { cfg ->
+    def targetFile = file(cfg.target)
+    def generatorFile = file(cfg.generator)
+    def outFile = codegenOutputFor(project, genSrcDir, targetFile)
+
+    tasks.register(cfg.name as String) {
+        group = 'code generation'
+        description = "Generates spliced ${outFile.name} by inserting code from ${generatorFile.name} at marker"
+
+        inputs.file(targetFile)
+        inputs.file(generatorFile)
+        outputs.file(outFile)
+
+        doLast {
+            outFile.parentFile.mkdirs()
+            def sourceText = targetFile.getText('UTF-8')
+            def marker = cfg.marker as String
+            if (!sourceText.contains(marker)) {
+                throw new GradleException("Marker not found in ${targetFile}: ${marker}")
+            }
+            String generatedBlock
+            try {
+                def baos = new ByteArrayOutputStream()
+                exec {
+                    commandLine 'flour', generatorFile.absolutePath
+                    standardOutput = baos
+                }
+                generatedBlock = baos.toString('UTF-8')
+            } catch (Exception e) {
+                throw new GradleException("${generatorFile.name} failed: (" + e.class.simpleName + "): " + e.message)
+            }
+            def newText = sourceText.replace(marker, generatedBlock)
+            outFile.setText(newText, 'UTF-8')
+        }
+    }
+}
+
+// Make IDE aware this is a generated source directory
+idea {
+    module {
+        generatedSourceDirs += genSrcDir
+    }
+}
+
+// Ensure compilation uses the generated files when present
+tasks.named('compileJava') {
+    dependsOn codegenEntries.collect { cfg -> tasks.named(cfg.name as String) }
 }
 
 publishing {
