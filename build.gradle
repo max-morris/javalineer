@@ -179,9 +179,18 @@ idea {
     }
 }
 
+def codegenTasks = codegenEntries.collect {
+    tasks.named(it.name as String)
+}
+
 // Ensure compilation uses the generated files when present
 tasks.named('compileJava') {
-    dependsOn codegenEntries.collect { cfg -> tasks.named(cfg.name as String) }
+    dependsOn codegenTasks
+}
+
+// Ensure sourcesJar contains generated sources
+tasks.named('sourcesJar') {
+    dependsOn codegenTasks
 }
 
 publishing {
