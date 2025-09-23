@@ -1,3 +1,5 @@
+import java.security.MessageDigest
+
 plugins {
     id 'java'
     id 'java-library'
@@ -71,12 +73,78 @@ codegenEntries.each { cfg ->
     def generatorFile = file(cfg.generator)
     def outFile = codegenOutputFor(project, genSrcDir, targetFile)
 
+    // Flour interpreter configuration and caching
+    def flourUrl = 'https://www.cct.lsu.edu/~mmorris/flour/bin/2025-09-18/flouri.jar'
+    def flourMd5 = 'fd46dbc4118ee70f7406f46ad7d28ad8'
+
+    // Return a File pointing to cached flour jar, downloading it once if missing and verifying checksum
+    Closure<File> getFlourJar = {
+        // Cache under Gradle user home so it persists across builds and clean tasks
+        File cacheDir = new File(gradle.gradleUserHomeDir, 'javalineer/flour')
+        cacheDir.mkdirs()
+        String fileName = URLEncoder.encode(flourUrl, 'UTF-8')
+        File jarFile = new File(cacheDir, fileName)
+
+        // Helper to compute MD5 digest of a file
+        Closure<String> computeMd5 = { File f ->
+            def md = MessageDigest.getInstance('MD5')
+            f.withInputStream { is ->
+                byte[] buf = new byte[8192]
+                int r
+                while ((r = is.read(buf)) != -1) {
+                    md.update(buf, 0, r)
+                }
+            }
+            byte[] digest = md.digest()
+            StringBuilder sb = new StringBuilder()
+            for (byte b : digest) {
+                sb.append(String.format("%02x", b))
+            }
+            sb.toString()
+        }
+
+        // Helper to download the jar
+        Closure<Void> download = {
+            try {
+                new URL(flourUrl).withInputStream { is ->
+                    jarFile.withOutputStream { os -> os << is }
+                }
+            } catch (Exception e) {
+                throw new GradleException("Failed to download flour interpreter from ${flourUrl}: " + e.message)
+            }
+            return null
+        }
+
+        if (!jarFile.exists()) {
+            download.call()
+        } else {
+            // Verify existing cached file; if mismatch, re-download
+            String md5 = computeMd5.call(jarFile)
+            if (!md5.equalsIgnoreCase(flourMd5)) {
+                jarFile.delete()
+                download.call()
+            }
+        }
+
+        // Verify after ensuring presence
+        String finalMd5 = computeMd5.call(jarFile)
+        if (!finalMd5.equalsIgnoreCase(flourMd5)) {
+            jarFile.delete()
+            throw new GradleException("Checksum verification failed for flour interpreter. Expected ${flourMd5}, got ${finalMd5}")
+        }
+
+        return jarFile
+    }
+
     tasks.register(cfg.name as String) {
         group = 'code generation'
         description = "Generates spliced ${outFile.name} by inserting code from ${generatorFile.name} at marker"
 
         inputs.file(targetFile)
         inputs.file(generatorFile)
+        // Re-run if the interpreter URL or checksum changes
+        inputs.property('flourUrl', flourUrl)
+        inputs.property('flourMd5', flourMd5)
         outputs.file(outFile)
 
         doLast {
@@ -89,8 +157,9 @@ codegenEntries.each { cfg ->
             String generatedBlock
             try {
                 def baos = new ByteArrayOutputStream()
+                File flourJar = getFlourJar.call()
                 exec {
-                    commandLine 'flour', generatorFile.absolutePath
+                    commandLine 'java', '-jar', flourJar.absolutePath, generatorFile.absolutePath
                     standardOutput = baos
                 }
                 generatedBlock = baos.toString('UTF-8')
