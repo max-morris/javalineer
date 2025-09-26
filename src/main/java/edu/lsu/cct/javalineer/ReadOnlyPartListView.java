@@ -86,4 +86,14 @@ public class ReadOnlyPartListView<E> extends PartListView<E> implements ReadView
     public Iterator<E> iterator() {
         return ReadView.getViewIterator(this);
     }
+
+    @Override
+    public int sourceBegin() {
+        return offset - ghostSize;
+    }
+
+    @Override
+    public int sourceEnd() {
+        return offset + size + ghostSize;
+    }
 }

@@ -8,4 +8,6 @@ public interface View<T> {
     int begin();
     int end();
     int size();
+    int sourceBegin();
+    int sourceEnd();
 }

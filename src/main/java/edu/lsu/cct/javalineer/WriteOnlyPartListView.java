@@ -80,4 +80,14 @@ public class WriteOnlyPartListView<E> extends PartListView<E> implements WriteVi
     public int end() {
         return size;
     }
+
+    @Override
+    public int sourceBegin() {
+        return offset;
+    }
+
+    @Override
+    public int sourceEnd() {
+        return offset + size;
+    }
 }
