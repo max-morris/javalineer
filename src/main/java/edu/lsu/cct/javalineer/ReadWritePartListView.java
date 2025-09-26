@@ -4,12 +4,12 @@ import java.util.Iterator;
 import java.util.List;
 
 public class ReadWritePartListView<E> extends PartListView<E> implements ReadWriteView<E> {
-    public ReadWritePartListView(List<E> underlying, int offset, int size, int ghostSize, int partitionNum) {
-        super(underlying, offset, size, ghostSize, partitionNum);
+    public ReadWritePartListView(List<E> underlying, int offset, int size, int ghostSize, int partitionNum, PartitionableList<E> source) {
+        super(underlying, offset, size, ghostSize, partitionNum, source);
     }
 
-    public ReadWritePartListView(List<E> underlying, int offset, int size) {
-        super(underlying, offset, size);
+    public ReadWritePartListView(List<E> underlying, int offset, int size, PartitionableList<E> source) {
+        super(underlying, offset, size, source);
     }
 
     public ReadWritePartListView(ReadWritePartListView<E> other, int offset, int size, int ghostSize) {

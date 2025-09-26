@@ -47,7 +47,7 @@ final var dataSize${j} = data${j}.size();
 final var lo${j} = partIndex(partNum, nChunks, dataSize${j}, nGhosts);
 final var hi${j} = partIndex(partNum + 1, nChunks, dataSize${j}, nGhosts);
 final var chunkSize${j} = hi${j} - lo${j};
-final var view${j} = new ${rw.1}PartListView<>(data${j}, lo${j}, chunkSize${j}, nGhosts, partNum);
+final var view${j} = new ${rw.1}PartListView<>(data${j}, lo${j}, chunkSize${j}, nGhosts, partNum, list${j});
         ##;
     }).join("\n\n")
 }
@@ -60,7 +60,7 @@ final var data${j} = list${j}.data;
 final var lo${j} = ranges.getWritableBegin(partNum);
 final var hi${j} = ranges.getWritableEnd(partNum);
 final var chunkSize${j} = hi${j} - lo${j};
-final var view${j} = new ${rw.1}PartListView<>(data${j}, lo${j}, chunkSize${j}, nGhosts, partNum);
+final var view${j} = new ${rw.1}PartListView<>(data${j}, lo${j}, chunkSize${j}, nGhosts, partNum, list${j});
         ##;
     }).join("\n\n")
 }

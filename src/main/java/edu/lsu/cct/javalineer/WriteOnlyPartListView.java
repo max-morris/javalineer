@@ -3,12 +3,12 @@ package edu.lsu.cct.javalineer;
 import java.util.List;
 
 public class WriteOnlyPartListView<E> extends PartListView<E> implements WriteView<E> {
-    public WriteOnlyPartListView(List<E> underlying, int offset, int size, int ghostSize, int partitionNum) {
-        super(underlying, offset, size, ghostSize, partitionNum);
+    public WriteOnlyPartListView(List<E> underlying, int offset, int size, int ghostSize, int partitionNum, PartitionableList<E> source) {
+        super(underlying, offset, size, ghostSize, partitionNum, source);
     }
 
-    public WriteOnlyPartListView(List<E> underlying, int offset, int size) {
-        super(underlying, offset, size);
+    public WriteOnlyPartListView(List<E> underlying, int offset, int size, PartitionableList<E> source) {
+        super(underlying, offset, size, source);
     }
 
     public WriteOnlyPartListView(WriteOnlyPartListView<E> other, int offset, int size, int ghostSize) {

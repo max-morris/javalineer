@@ -165,7 +165,7 @@ public class PartitionableList<E> {
                 final var chunkSize = hi - lo;
                 final var partNum = i;
                 Pool.run(() -> {
-                    final var view = new ReadWritePartListView<>(data, lo, chunkSize, nGhosts, partNum);
+                    final var view = new ReadWritePartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
                     chunkTask.run(view);
                     tasksDone.signal();
                 });
@@ -173,7 +173,7 @@ public class PartitionableList<E> {
             final var lo = partIndex(nChunks - 1, nChunks, dataSize, nGhosts);
             final var hi = partIndex(nChunks, nChunks, dataSize, nGhosts);
             final var chunkSize = hi - lo;
-            final var view = new ReadWritePartListView<>(data, lo, chunkSize, nGhosts, nChunks - 1);
+            final var view = new ReadWritePartListView<>(data, lo, chunkSize, nGhosts, nChunks - 1, this);
             chunkTask.run(view);
             tasksDone.signal();
 
@@ -213,7 +213,7 @@ public class PartitionableList<E> {
                 final var chunkSize = hi - lo;
                 final var partNum = i;
                 Pool.run(() -> {
-                    final var view = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum);
+                    final var view = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
                     chunkTask.run(view);
                     tasksDone.signal();
                 });
@@ -221,7 +221,7 @@ public class PartitionableList<E> {
             final var lo = partIndex(nChunks - 1, nChunks, dataSize, nGhosts);
             final var hi = partIndex(nChunks, nChunks, dataSize, nGhosts);
             final var chunkSize = hi - lo;
-            final var view = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts, nChunks - 1);
+            final var view = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts, nChunks - 1, this);
             chunkTask.run(view);
             tasksDone.signal();
 
@@ -260,7 +260,7 @@ public class PartitionableList<E> {
                 final var chunkSize = hi - lo;
                 final var partNum = i;
                 Pool.run(() -> {
-                    final var view = new WriteOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum);
+                    final var view = new WriteOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
                     chunkTask.run(view);
                     tasksDone.signal();
                 });
@@ -268,7 +268,7 @@ public class PartitionableList<E> {
             final var lo = partIndex(nChunks - 1, nChunks, dataSize, nGhosts);
             final var hi = partIndex(nChunks, nChunks, dataSize, nGhosts);
             final var chunkSize = hi - lo;
-            final var view = new WriteOnlyPartListView<>(data, lo, chunkSize, nGhosts, nChunks - 1);
+            final var view = new WriteOnlyPartListView<>(data, lo, chunkSize, nGhosts, nChunks - 1, this);
             chunkTask.run(view);
             tasksDone.signal();
 
@@ -308,7 +308,7 @@ public class PartitionableList<E> {
                 final var chunkSize = hi - lo;
                 final var partNum = i;
                 Pool.run(() -> {
-                    final var view = new ReadWritePartListView<>(data, lo, chunkSize, nGhosts, partNum);
+                    final var view = new ReadWritePartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
                     chunkTask.run(view);
                     tasksDone.signal();
                 });
@@ -316,7 +316,7 @@ public class PartitionableList<E> {
             final var lo = ranges.getWritableBegin(nChunks - 1);
             final var hi = ranges.getWritableEnd(nChunks - 1);
             final var chunkSize = hi - lo;
-            final var view = new ReadWritePartListView<>(data, lo, chunkSize, nGhosts, nChunks - 1);
+            final var view = new ReadWritePartListView<>(data, lo, chunkSize, nGhosts, nChunks - 1, this);
             chunkTask.run(view);
             tasksDone.signal();
 
@@ -356,7 +356,7 @@ public class PartitionableList<E> {
                 final var chunkSize = hi - lo;
                 final var partNum = i;
                 Pool.run(() -> {
-                    final var view = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum);
+                    final var view = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
                     chunkTask.run(view);
                     tasksDone.signal();
                 });
@@ -364,7 +364,7 @@ public class PartitionableList<E> {
             final var lo = ranges.getWritableBegin(nChunks - 1);
             final var hi = ranges.getWritableEnd(nChunks - 1);
             final var chunkSize = hi - lo;
-            final var view = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts, nChunks - 1);
+            final var view = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts, nChunks - 1, this);
             chunkTask.run(view);
             tasksDone.signal();
 
@@ -404,7 +404,7 @@ public class PartitionableList<E> {
                 final var chunkSize = hi - lo;
                 final var partNum = i;
                 Pool.run(() -> {
-                    final var view = new WriteOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum);
+                    final var view = new WriteOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
                     chunkTask.run(view);
                     tasksDone.signal();
                 });
@@ -412,7 +412,7 @@ public class PartitionableList<E> {
             final var lo = ranges.getWritableBegin(nChunks - 1);
             final var hi = ranges.getWritableEnd(nChunks - 1);
             final var chunkSize = hi - lo;
-            final var view = new WriteOnlyPartListView<>(data, lo, chunkSize, nGhosts, nChunks - 1);
+            final var view = new WriteOnlyPartListView<>(data, lo, chunkSize, nGhosts, nChunks - 1, this);
             chunkTask.run(view);
             tasksDone.signal();
 
@@ -460,7 +460,7 @@ public class PartitionableList<E> {
                 final var chunkSize = hi - lo;
                 final var partNum = i;
                 Pool.run(() -> {
-                    final var view = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum);
+                    final var view = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
                     chunkTask.apply(view).thenAccept(res -> {
                         Guard.runGuarded(intermediateGuard, () -> {
                             intermediateList.add(res);
@@ -473,7 +473,7 @@ public class PartitionableList<E> {
             final var lo = partIndex(nChunks - 1, nChunks, dataSize, nGhosts);
             final var hi = partIndex(nChunks, nChunks, dataSize, nGhosts);
             final var chunkSize = hi - lo;
-            final var viewLast = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts, nChunks - 1);
+            final var viewLast = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts, nChunks - 1, this);
             chunkTask.apply(viewLast).thenAccept(res -> {
                 Guard.runGuarded(intermediateGuard, () -> {
                     intermediateList.add(res);
@@ -483,7 +483,7 @@ public class PartitionableList<E> {
 
             tasksDone.getFut().thenRun(() -> {
                 assert nChunks == intermediateList.size();
-                final var view = new ReadOnlyPartListView<>(intermediateList, 0, nChunks, 0, 0);
+                final var view = new ReadOnlyPartListView<>(intermediateList, 0, nChunks, 0, 0, this);
 
                 chunkTask.apply(view).thenAccept(result::complete);
 
