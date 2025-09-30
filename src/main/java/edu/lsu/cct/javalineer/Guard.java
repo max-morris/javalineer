@@ -22,6 +22,18 @@ public class Guard implements Comparable<Guard> {
         return this.id - g.id;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        Guard guard = (Guard) o;
+        return id == guard.id;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
     final AtomicReference<GuardTask> next = new AtomicReference<>();
 
     public void runGuarded(Runnable r) {

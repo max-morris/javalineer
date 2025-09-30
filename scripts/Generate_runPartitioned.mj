@@ -33,11 +33,6 @@ fn mkListInits(n: int) -> string {
     ["final var list${i} = pi${i}.getUnderlying();" | i in [1..=n]].join("\n")
 }
 
-fn mkListsNotBusyInit(n: int) -> string {
-    let args = ["list${i}.busy" | i in [1..=n]].join(", ");
-    "final var listsNotBusy = Guard.newCondition(${args});"
-}
-
 fn mkViewInits(rwList: list<string>) -> string {
     (for rw in rwList.enumerate() {
         let j = rw.0 + 1;
@@ -65,121 +60,33 @@ final var view${j} = new ${rw.1}PartListView<>(data${j}, lo${j}, chunkSize${j}, 
     }).join("\n\n")
 }
 
-fn mkBusyFalseSetters(rwList: list<string>) -> string {
+fn mkReadyInits(rwList: list<string>) -> string {
     (for rw in rwList.enumerate() {
-        let j = rw.0 + 1;
-        push ##
-Guard.runGuarded(list${j}.busy, busy${j}_ -> {
-    busy${j}_.set(false);
-    list${j}.notBusy.signalAll();
+            let j = rw.0 + 1;
+            push ##
+final var ready${j} = Guard.runCondition(list${j}.rangeAccountantCond, (rangeAccountantVar) -> {
+    return rangeAccountantVar.get().isRangeOk(PartIntentKind.${rw.1}, lo${j}, hi${j}, nGhosts);
 });
         ##;
     }).join("\n\n")
 }
 
-fn mkNotBusySignalers(rwList: list<string>) -> string {
+fn mkRangeRelease(rwList: list<string>) -> string {
     (for rw in rwList.enumerate() {
-        let j = rw.0 + 1;
-        push ##
-Guard.runCondition(list${j}.notBusy, busy${j} -> {
-    listsNotBusy.signal();
-    return begun.get();
+                let j = rw.0 + 1;
+                push ##
+list${j}.rangeAccountant.runGuarded((rangeAccountantVar) -> {
+    rangeAccountantVar.get().release(PartIntentKind.${rw.1}, lo${j}, hi${j}, nGhosts);
+    list${j}.rangeAccountantCond.signalAll();
 });
         ##;
     }).join("\n\n")
-}
-
-fn mkRunCondition(rwList: list<string>) -> string {
-    let busyList = ["busy${i}" | i in [1..=rwList.len()]];
-    let busyGetlist = ["${b}.get()" | b in busyList].join(" || ");
-    let busySetList = ["${b}.set(true);" | b in busyList].join("\n");
-    let viewList = ["view${i}" | i in [1..=rwList.len()]].join(", ");
-
-    return ##
-
-Guard.runCondition(listsNotBusy, (${busyList.join(", ")}) -> {
-    if (${busyGetlist}) {
-        return false;
-    }
-
-    ${busySetList}
-
-    begun.set(true);
-
-    for (int partNum = 0; partNum < nChunks - 1; partNum++) {
-        ${mkViewInits(rwList)}
-
-        Pool.run(() -> {
-            chunkTask.run(${viewList});
-            tasksDone.signal();
-        });
-    }
-
-    final var partNum = nChunks - 1;
-
-    ${mkViewInits(rwList)}
-
-    chunkTask.run(${viewList});
-    tasksDone.signal();
-
-    tasksDone.getFut().thenRun(() -> {
-        done.complete(null);
-
-        ${mkBusyFalseSetters(rwList)}
-    });
-
-    return true;
-});
-
-    ##.trim();
-}
-
-fn mkRunCondition2(rwList: list<string>) -> string {
-    let busyList = ["busy${i}" | i in [1..=rwList.len()]];
-    let busyGetlist = ["${b}.get()" | b in busyList].join(" || ");
-    let busySetList = ["${b}.set(true);" | b in busyList].join("\n");
-    let viewList = ["view${i}" | i in [1..=rwList.len()]].join(", ");
-
-    return ##
-
-Guard.runCondition(listsNotBusy, (${busyList.join(", ")}) -> {
-    if (${busyGetlist}) {
-        return false;
-    }
-
-    ${busySetList}
-
-    begun.set(true);
-
-    for (int partNum = 0; partNum < ranges.numPartitions() - 1; partNum++) {
-        ${mkViewInits2(rwList)}
-
-        Pool.run(() -> {
-            chunkTask.run(${viewList});
-            tasksDone.signal();
-        });
-    }
-
-    final var partNum = ranges.numPartitions() - 1;
-
-    ${mkViewInits2(rwList)}
-
-    chunkTask.run(${viewList});
-    tasksDone.signal();
-
-    tasksDone.getFut().thenRun(() -> {
-        done.complete(null);
-
-        ${mkBusyFalseSetters(rwList)}
-    });
-
-    return true;
-});
-
-    ##.trim();
 }
 
 fn mkBody(rwList: list<string>) -> string {
+    let readyList = ["ready${i}" | i in [1..=rwList.len()]].join(", ");
+    let viewList = ["view${i}" | i in [1..=rwList.len()]].join(", ");
+
     ##
 
 final var done = new CompletableFuture<Void>();
@@ -187,15 +94,30 @@ final var tasksDone = new CountdownLatch(nChunks);
 
 ${mkListInits(rwList.len())}
 
-${mkListsNotBusyInit(rwList.len())}
+for (int i = 0; i < nChunks; i++) {
+    final var partNum = i;
+    ${mkViewInits(rwList)}
+    ${mkReadyInits(rwList)}
 
-final var begun = new AtomicBoolean();
+    var ready = CompletableFuture.allOf(${readyList});
 
-${mkRunCondition(rwList)}
+    Runnable task = () -> {
+        chunkTask.run(${viewList});
+        tasksDone.signal();
 
-if (!begun.get()) {
-    ${mkNotBusySignalers(rwList)}
+        ${mkRangeRelease(rwList)}
+    };
+
+    if (partNum == nChunks - 1) {
+        ready.thenRun(task);
+    } else {
+        ready.thenRunAsync(task, Pool.getPool());
+    }
 }
+
+tasksDone.getFut().thenRun(() -> {
+    done.complete(null);
+});
 
 return done;
 
@@ -203,22 +125,39 @@ return done;
 }
 
 fn mkBody2(rwList: list<string>) -> string {
-    ##
+    let readyList = ["ready${i}" | i in [1..=rwList.len()]].join(", ");
+    let viewList = ["view${i}" | i in [1..=rwList.len()]].join(", ");
 
+    ##
 final var done = new CompletableFuture<Void>();
 final var tasksDone = new CountdownLatch(ranges.numPartitions());
 
 ${mkListInits(rwList.len())}
 
-${mkListsNotBusyInit(rwList.len())}
+for (int i = 0; i < ranges.numPartitions(); i++) {
+    final var partNum = i;
+    ${mkViewInits2(rwList)}
+    ${mkReadyInits(rwList)}
 
-final var begun = new AtomicBoolean();
+    var ready = CompletableFuture.allOf(${readyList});
 
-${mkRunCondition2(rwList)}
+    Runnable task = () -> {
+        chunkTask.run(${viewList});
+        tasksDone.signal();
 
-if (!begun.get()) {
-    ${mkNotBusySignalers(rwList)}
+        ${mkRangeRelease(rwList)}
+    };
+
+    if (partNum == ranges.numPartitions() - 1) {
+        ready.thenRun(task);
+    } else {
+        ready.thenRunAsync(task, Pool.getPool());
+    }
 }
+
+tasksDone.getFut().thenRun(() -> {
+    done.complete(null);
+});
 
 return done;
 

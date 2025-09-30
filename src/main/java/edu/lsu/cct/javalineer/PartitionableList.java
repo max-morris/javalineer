@@ -12,13 +12,14 @@ import java.util.function.IntFunction;
 @SuppressWarnings({"unused", "CodeBlock2Expr"})
 public class PartitionableList<E> {
     private final List<E> data;
-    private final GuardVar<Boolean> busy;
-    private final CondContext<CondTask1<Boolean>> notBusy;
+    private final GuardVar<RangeAccountant> rangeAccountant;
+    private final CondContext<CondTask1<RangeAccountant>> rangeAccountantCond;
+
 
     public PartitionableList(List<E> data) {
         this.data = data;
-        this.busy = new GuardVar<>(false);
-        this.notBusy = Guard.newCondition(this.busy);
+        this.rangeAccountant = new GuardVar<>(new RangeAccountant());
+        this.rangeAccountantCond = CondContext.newCond(this.rangeAccountant);
     }
 
     public PartitionableList() {
@@ -30,8 +31,8 @@ public class PartitionableList<E> {
         for (int i = 0; i < size; i++) {
             this.data.add(fillFunction.apply(i));
         }
-        this.busy = new GuardVar<>(false);
-        this.notBusy = Guard.newCondition(this.busy);
+        this.rangeAccountant = new GuardVar<>(new RangeAccountant());
+        this.rangeAccountantCond = CondContext.newCond(this.rangeAccountant);
     }
 
     public static <E> PartitionableList<E> of(int size, IntFunction<E> fillFunction) {
@@ -146,46 +147,40 @@ public class PartitionableList<E> {
     public CompletableFuture<Void> runPartitionedReadWrite(int nChunks,
                                                            int nGhosts,
                                                            VoidPartTask1<ReadWritePartListView<E>> chunkTask) {
-        var done = new CompletableFuture<Void>();
+        final var done = new CompletableFuture<Void>();
+        final var tasksDone = new CountdownLatch(nChunks);
 
-        Guard.runCondition(notBusy, busyVar -> {
-            if (busyVar.get()) {
-                return false;
-            }
+        final var dataSize = data.size();
 
-            busyVar.set(true);
-
-            final var dataSize = data.size();
-
-            final var tasksDone = new CountdownLatch(nChunks);
-
-            for (int i = 0; i < nChunks - 1; i++) {
-                final var lo = partIndex(i, nChunks, dataSize, nGhosts);
-                final var hi = partIndex(i + 1, nChunks, dataSize, nGhosts);
-                final var chunkSize = hi - lo;
-                final var partNum = i;
-                Pool.run(() -> {
-                    final var view = new ReadWritePartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
-                    chunkTask.run(view);
-                    tasksDone.signal();
-                });
-            }
-            final var lo = partIndex(nChunks - 1, nChunks, dataSize, nGhosts);
-            final var hi = partIndex(nChunks, nChunks, dataSize, nGhosts);
+        for (int i = 0; i < nChunks; i++) {
+            final var lo = partIndex(i, nChunks, dataSize, nGhosts);
+            final var hi = partIndex(i + 1, nChunks, dataSize, nGhosts);
             final var chunkSize = hi - lo;
-            final var view = new ReadWritePartListView<>(data, lo, chunkSize, nGhosts, nChunks - 1, this);
-            chunkTask.run(view);
-            tasksDone.signal();
+            final var partNum = i;
 
-            tasksDone.getFut().thenRun(() -> {
-                done.complete(null);
-                Guard.runGuarded(busy, busyVar1 -> {
-                    busyVar1.set(false);
-                    notBusy.signal();
-                });
+            var ready = Guard.runCondition(this.rangeAccountantCond, (rangeAccountantVar) -> {
+                return rangeAccountantVar.get().isRangeOk(PartIntentKind.ReadWrite, lo, hi, nGhosts);
             });
 
-            return true;
+            Runnable task = () -> {
+                final var view = new ReadWritePartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
+                chunkTask.run(view);
+                tasksDone.signal();
+                this.rangeAccountant.runGuarded((rangeAccountantVar) -> {
+                    rangeAccountantVar.get().release(PartIntentKind.ReadWrite, lo, hi, nGhosts);
+                    this.rangeAccountantCond.signalAll();
+                });
+            };
+
+            if (partNum == nChunks - 1) {
+                ready.thenRun(task);
+            } else {
+                ready.thenRunAsync(task, Pool.getPool());
+            }
+        }
+
+        tasksDone.getFut().thenRun(() -> {
+            done.complete(null);
         });
 
         return done;
@@ -194,46 +189,40 @@ public class PartitionableList<E> {
     public CompletableFuture<Void> runPartitionedReadOnly(int nChunks,
                                                           int nGhosts,
                                                           VoidPartTask1<ReadOnlyPartListView<E>> chunkTask) {
-        var done = new CompletableFuture<Void>();
+        final var done = new CompletableFuture<Void>();
+        final var tasksDone = new CountdownLatch(nChunks);
 
-        Guard.runCondition(notBusy, busyVar -> {
-            if (busyVar.get()) {
-                return false;
-            }
+        final var dataSize = data.size();
 
-            busyVar.set(true);
-
-            final var dataSize = data.size();
-
-            final var tasksDone = new CountdownLatch(nChunks);
-
-            for (int i = 0; i < nChunks - 1; i++) {
-                final var lo = partIndex(i, nChunks, dataSize, nGhosts);
-                final var hi = partIndex(i + 1, nChunks, dataSize, nGhosts);
-                final var chunkSize = hi - lo;
-                final var partNum = i;
-                Pool.run(() -> {
-                    final var view = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
-                    chunkTask.run(view);
-                    tasksDone.signal();
-                });
-            }
-            final var lo = partIndex(nChunks - 1, nChunks, dataSize, nGhosts);
-            final var hi = partIndex(nChunks, nChunks, dataSize, nGhosts);
+        for (int i = 0; i < nChunks; i++) {
+            final var lo = partIndex(i, nChunks, dataSize, nGhosts);
+            final var hi = partIndex(i + 1, nChunks, dataSize, nGhosts);
             final var chunkSize = hi - lo;
-            final var view = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts, nChunks - 1, this);
-            chunkTask.run(view);
-            tasksDone.signal();
+            final var partNum = i;
 
-            tasksDone.getFut().thenRun(() -> {
-                done.complete(null);
-                Guard.runGuarded(busy, busyVar1 -> {
-                    busyVar1.set(false);
-                    notBusy.signal();
-                });
+            var ready = Guard.runCondition(this.rangeAccountantCond, (rangeAccountantVar) -> {
+                return rangeAccountantVar.get().isRangeOk(PartIntentKind.ReadOnly, lo, hi, nGhosts);
             });
 
-            return true;
+            Runnable task = () -> {
+                final var view = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
+                chunkTask.run(view);
+                tasksDone.signal();
+                this.rangeAccountant.runGuarded((rangeAccountantVar) -> {
+                    rangeAccountantVar.get().release(PartIntentKind.ReadOnly, lo, hi, nGhosts);
+                    this.rangeAccountantCond.signalAll();
+                });
+            };
+
+            if (partNum == nChunks - 1) {
+                ready.thenRun(task);
+            } else {
+                ready.thenRunAsync(task, Pool.getPool());
+            }
+        }
+
+        tasksDone.getFut().thenRun(() -> {
+            done.complete(null);
         });
 
         return done;
@@ -242,45 +231,40 @@ public class PartitionableList<E> {
     public CompletableFuture<Void> runPartitionedWriteOnly(int nChunks,
                                                            int nGhosts,
                                                            VoidPartTask1<WriteOnlyPartListView<E>> chunkTask) {
-        var done = new CompletableFuture<Void>();
+        final var done = new CompletableFuture<Void>();
+        final var tasksDone = new CountdownLatch(nChunks);
 
-        Guard.runCondition(notBusy, busyVar -> {
-            if (busyVar.get()) {
-                return false;
-            }
+        final var dataSize = data.size();
 
-            busyVar.set(true);
-
-            final var dataSize = data.size();
-            final var tasksDone = new CountdownLatch(nChunks);
-
-            for (int i = 0; i < nChunks - 1; i++) {
-                final var lo = partIndex(i, nChunks, dataSize, nGhosts);
-                final var hi = partIndex(i + 1, nChunks, dataSize, nGhosts);
-                final var chunkSize = hi - lo;
-                final var partNum = i;
-                Pool.run(() -> {
-                    final var view = new WriteOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
-                    chunkTask.run(view);
-                    tasksDone.signal();
-                });
-            }
-            final var lo = partIndex(nChunks - 1, nChunks, dataSize, nGhosts);
-            final var hi = partIndex(nChunks, nChunks, dataSize, nGhosts);
+        for (int i = 0; i < nChunks; i++) {
+            final var lo = partIndex(i, nChunks, dataSize, nGhosts);
+            final var hi = partIndex(i + 1, nChunks, dataSize, nGhosts);
             final var chunkSize = hi - lo;
-            final var view = new WriteOnlyPartListView<>(data, lo, chunkSize, nGhosts, nChunks - 1, this);
-            chunkTask.run(view);
-            tasksDone.signal();
+            final var partNum = i;
 
-            tasksDone.getFut().thenRun(() -> {
-                done.complete(null);
-                Guard.runGuarded(busy, busyVar1 -> {
-                    busyVar1.set(false);
-                    notBusy.signal();
-                });
+            var ready = Guard.runCondition(this.rangeAccountantCond, (rangeAccountantVar) -> {
+                return rangeAccountantVar.get().isRangeOk(PartIntentKind.WriteOnly, lo, hi, nGhosts);
             });
 
-            return true;
+            Runnable task = () -> {
+                final var view = new WriteOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
+                chunkTask.run(view);
+                tasksDone.signal();
+                this.rangeAccountant.runGuarded((rangeAccountantVar) -> {
+                    rangeAccountantVar.get().release(PartIntentKind.WriteOnly, lo, hi, nGhosts);
+                    this.rangeAccountantCond.signalAll();
+                });
+            };
+
+            if (partNum == nChunks - 1) {
+                ready.thenRun(task);
+            } else {
+                ready.thenRunAsync(task, Pool.getPool());
+            }
+        }
+
+        tasksDone.getFut().thenRun(() -> {
+            done.complete(null);
         });
 
         return done;
@@ -289,46 +273,40 @@ public class PartitionableList<E> {
     public CompletableFuture<Void> runPartitionedReadWrite(PartitionRangeProvider ranges,
                                                            int nGhosts,
                                                            VoidPartTask1<ReadWritePartListView<E>> chunkTask) {
-        var done = new CompletableFuture<Void>();
+        final var done = new CompletableFuture<Void>();
+        final var tasksDone = new CountdownLatch(ranges.numPartitions());
 
-        Guard.runCondition(notBusy, busyVar -> {
-            if (busyVar.get()) {
-                return false;
-            }
+        final var dataSize = data.size();
 
-            busyVar.set(true);
-
-            final var dataSize = data.size();
-            final var nChunks = ranges.numPartitions();
-            final var tasksDone = new CountdownLatch(nChunks);
-
-            for (int i = 0; i < nChunks - 1; i++) {
-                final var lo = ranges.getWritableBegin(i);
-                final var hi = ranges.getWritableEnd(i);
-                final var chunkSize = hi - lo;
-                final var partNum = i;
-                Pool.run(() -> {
-                    final var view = new ReadWritePartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
-                    chunkTask.run(view);
-                    tasksDone.signal();
-                });
-            }
-            final var lo = ranges.getWritableBegin(nChunks - 1);
-            final var hi = ranges.getWritableEnd(nChunks - 1);
+        for (int i = 0; i < ranges.numPartitions(); i++) {
+            final var lo = ranges.getWritableBegin(i);
+            final var hi = ranges.getWritableEnd(i);
             final var chunkSize = hi - lo;
-            final var view = new ReadWritePartListView<>(data, lo, chunkSize, nGhosts, nChunks - 1, this);
-            chunkTask.run(view);
-            tasksDone.signal();
+            final var partNum = i;
 
-            tasksDone.getFut().thenRun(() -> {
-                done.complete(null);
-                Guard.runGuarded(busy, busyVar1 -> {
-                    busyVar1.set(false);
-                    notBusy.signal();
-                });
+            var ready = Guard.runCondition(this.rangeAccountantCond, (rangeAccountantVar) -> {
+                return rangeAccountantVar.get().isRangeOk(PartIntentKind.ReadWrite, lo, hi, nGhosts);
             });
 
-            return true;
+            Runnable task = () -> {
+                final var view = new ReadWritePartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
+                chunkTask.run(view);
+                tasksDone.signal();
+                this.rangeAccountant.runGuarded((rangeAccountantVar) -> {
+                    rangeAccountantVar.get().release(PartIntentKind.ReadWrite, lo, hi, nGhosts);
+                    this.rangeAccountantCond.signalAll();
+                });
+            };
+
+            if (partNum == ranges.numPartitions() - 1) {
+                ready.thenRun(task);
+            } else {
+                ready.thenRunAsync(task, Pool.getPool());
+            }
+        }
+
+        tasksDone.getFut().thenRun(() -> {
+            done.complete(null);
         });
 
         return done;
@@ -337,46 +315,40 @@ public class PartitionableList<E> {
     public CompletableFuture<Void> runPartitionedReadOnly(PartitionRangeProvider ranges,
                                                           int nGhosts,
                                                           VoidPartTask1<ReadOnlyPartListView<E>> chunkTask) {
-        var done = new CompletableFuture<Void>();
+        final var done = new CompletableFuture<Void>();
+        final var tasksDone = new CountdownLatch(ranges.numPartitions());
 
-        Guard.runCondition(notBusy, busyVar -> {
-            if (busyVar.get()) {
-                return false;
-            }
+        final var dataSize = data.size();
 
-            busyVar.set(true);
-
-            final var dataSize = data.size();
-            final var nChunks = ranges.numPartitions();
-            final var tasksDone = new CountdownLatch(nChunks);
-
-            for (int i = 0; i < nChunks - 1; i++) {
-                final var lo = ranges.getWritableBegin(i);
-                final var hi = ranges.getWritableEnd(i);
-                final var chunkSize = hi - lo;
-                final var partNum = i;
-                Pool.run(() -> {
-                    final var view = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
-                    chunkTask.run(view);
-                    tasksDone.signal();
-                });
-            }
-            final var lo = ranges.getWritableBegin(nChunks - 1);
-            final var hi = ranges.getWritableEnd(nChunks - 1);
+        for (int i = 0; i < ranges.numPartitions(); i++) {
+            final var lo = ranges.getWritableBegin(i);
+            final var hi = ranges.getWritableEnd(i);
             final var chunkSize = hi - lo;
-            final var view = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts, nChunks - 1, this);
-            chunkTask.run(view);
-            tasksDone.signal();
+            final var partNum = i;
 
-            tasksDone.getFut().thenRun(() -> {
-                done.complete(null);
-                Guard.runGuarded(busy, busyVar1 -> {
-                    busyVar1.set(false);
-                    notBusy.signal();
-                });
+            var ready = Guard.runCondition(this.rangeAccountantCond, (rangeAccountantVar) -> {
+                return rangeAccountantVar.get().isRangeOk(PartIntentKind.ReadOnly, lo, hi, nGhosts);
             });
 
-            return true;
+            Runnable task = () -> {
+                final var view = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
+                chunkTask.run(view);
+                tasksDone.signal();
+                this.rangeAccountant.runGuarded((rangeAccountantVar) -> {
+                    rangeAccountantVar.get().release(PartIntentKind.ReadOnly, lo, hi, nGhosts);
+                    this.rangeAccountantCond.signalAll();
+                });
+            };
+
+            if (partNum == ranges.numPartitions() - 1) {
+                ready.thenRun(task);
+            } else {
+                ready.thenRunAsync(task, Pool.getPool());
+            }
+        }
+
+        tasksDone.getFut().thenRun(() -> {
+            done.complete(null);
         });
 
         return done;
@@ -385,46 +357,40 @@ public class PartitionableList<E> {
     public CompletableFuture<Void> runPartitionedWriteOnly(PartitionRangeProvider ranges,
                                                            int nGhosts,
                                                            VoidPartTask1<WriteOnlyPartListView<E>> chunkTask) {
-        var done = new CompletableFuture<Void>();
+        final var done = new CompletableFuture<Void>();
+        final var tasksDone = new CountdownLatch(ranges.numPartitions());
 
-        Guard.runCondition(notBusy, busyVar -> {
-            if (busyVar.get()) {
-                return false;
-            }
+        final var dataSize = data.size();
 
-            busyVar.set(true);
-
-            final var dataSize = data.size();
-            final var nChunks = ranges.numPartitions();
-            final var tasksDone = new CountdownLatch(nChunks);
-
-            for (int i = 0; i < nChunks - 1; i++) {
-                final var lo = ranges.getWritableBegin(i);
-                final var hi = ranges.getWritableEnd(i);
-                final var chunkSize = hi - lo;
-                final var partNum = i;
-                Pool.run(() -> {
-                    final var view = new WriteOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
-                    chunkTask.run(view);
-                    tasksDone.signal();
-                });
-            }
-            final var lo = ranges.getWritableBegin(nChunks - 1);
-            final var hi = ranges.getWritableEnd(nChunks - 1);
+        for (int i = 0; i < ranges.numPartitions(); i++) {
+            final var lo = ranges.getWritableBegin(i);
+            final var hi = ranges.getWritableEnd(i);
             final var chunkSize = hi - lo;
-            final var view = new WriteOnlyPartListView<>(data, lo, chunkSize, nGhosts, nChunks - 1, this);
-            chunkTask.run(view);
-            tasksDone.signal();
+            final var partNum = i;
 
-            tasksDone.getFut().thenRun(() -> {
-                done.complete(null);
-                Guard.runGuarded(busy, busyVar1 -> {
-                    busyVar1.set(false);
-                    notBusy.signal();
-                });
+            var ready = Guard.runCondition(this.rangeAccountantCond, (rangeAccountantVar) -> {
+                return rangeAccountantVar.get().isRangeOk(PartIntentKind.WriteOnly, lo, hi, nGhosts);
             });
 
-            return true;
+            Runnable task = () -> {
+                final var view = new WriteOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
+                chunkTask.run(view);
+                tasksDone.signal();
+                this.rangeAccountant.runGuarded((rangeAccountantVar) -> {
+                    rangeAccountantVar.get().release(PartIntentKind.WriteOnly, lo, hi, nGhosts);
+                    this.rangeAccountantCond.signalAll();
+                });
+            };
+
+            if (partNum == ranges.numPartitions() - 1) {
+                ready.thenRun(task);
+            } else {
+                ready.thenRunAsync(task, Pool.getPool());
+            }
+        }
+
+        tasksDone.getFut().thenRun(() -> {
+            done.complete(null);
         });
 
         return done;
@@ -438,62 +404,50 @@ public class PartitionableList<E> {
     public CompletableFuture<E> reducePartitioned(int nChunks,
                                                   int nGhosts,
                                                   Function<ReadOnlyPartListView<E>, CompletableFuture<E>> chunkTask) {
-        var result = new CompletableFuture<E>();
+        final var result = new CompletableFuture<E>();
+        final var tasksDone = new CountdownLatch(nChunks);
 
-        Guard.runCondition(notBusy, busyVar -> {
-            if (busyVar.get()) {
-                return false;
-            }
+        final var intermediateList = new ArrayList<E>(nChunks);
+        final var intermediateGuard = new Guard();
 
-            busyVar.set(true);
+        final var dataSize = data.size();
 
-            final var dataSize = data.size();
+        for (int i = 0; i < nChunks; i++) {
+            final var lo = partIndex(i, nChunks, dataSize, nGhosts);
+            final var hi = partIndex(i + 1, nChunks, dataSize, nGhosts);
+            final var chunkSize = hi - lo;
+            final var partNum = i;
 
-            final var tasksDone = new CountdownLatch(nChunks);
+            var ready = Guard.runCondition(this.rangeAccountantCond, (rangeAccountantVar) -> {
+                return rangeAccountantVar.get().isRangeOk(PartIntentKind.ReadOnly, lo, hi, nGhosts);
+            });
 
-            final var intermediateList = new ArrayList<E>(nChunks);
-            final var intermediateGuard = new Guard();
+            Runnable task = () -> {
+                final var view = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
+                chunkTask.apply(view).thenAccept(res -> {
+                    this.rangeAccountant.runGuarded((rangeAccountantVar) -> {
+                        rangeAccountantVar.get().release(PartIntentKind.ReadOnly, lo, hi, nGhosts);
+                        this.rangeAccountantCond.signalAll();
+                    });
 
-            for (int i = 0; i < nChunks - 1; i++) {
-                final var lo = partIndex(i, nChunks, dataSize, nGhosts);
-                final var hi = partIndex(i + 1, nChunks, dataSize, nGhosts);
-                final var chunkSize = hi - lo;
-                final var partNum = i;
-                Pool.run(() -> {
-                    final var view = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
-                    chunkTask.apply(view).thenAccept(res -> {
-                        Guard.runGuarded(intermediateGuard, () -> {
-                            intermediateList.add(res);
-                            tasksDone.signal();
-                        });
+                    Guard.runGuarded(intermediateGuard, () -> {
+                        intermediateList.add(res);
+                        tasksDone.signal();
                     });
                 });
+            };
+
+            if (partNum == nChunks - 1) {
+                ready.thenRun(task);
+            } else {
+                ready.thenRunAsync(task, Pool.getPool());
             }
+        }
 
-            final var lo = partIndex(nChunks - 1, nChunks, dataSize, nGhosts);
-            final var hi = partIndex(nChunks, nChunks, dataSize, nGhosts);
-            final var chunkSize = hi - lo;
-            final var viewLast = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts, nChunks - 1, this);
-            chunkTask.apply(viewLast).thenAccept(res -> {
-                Guard.runGuarded(intermediateGuard, () -> {
-                    intermediateList.add(res);
-                    tasksDone.signal();
-                });
-            });
-
-            tasksDone.getFut().thenRun(() -> {
-                assert nChunks == intermediateList.size();
-                final var view = new ReadOnlyPartListView<>(intermediateList, 0, nChunks, 0, 0, this);
-
-                chunkTask.apply(view).thenAccept(result::complete);
-
-                Guard.runGuarded(busy, busyVar1 -> {
-                    busyVar1.set(false);
-                    notBusy.signal();
-                });
-            });
-
-            return true;
+        tasksDone.getFut().thenRun(() -> {
+            assert nChunks == intermediateList.size();
+            final var view = new ReadOnlyPartListView<>(intermediateList, 0, nChunks, 0, 0, this);
+            chunkTask.apply(view).thenAccept(result::complete);
         });
 
         return result;

@@ -4,6 +4,7 @@ import java.lang.ref.SoftReference;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Objects;
 
 /**
  * An immutable, sorted collection of {@linkplain Guard Guards}.
@@ -157,6 +158,18 @@ public class GuardSet implements Iterable<Guard> {
 
     public boolean contains(Guard guard) {
         return Arrays.binarySearch(guards, 0, size, guard) >= 0;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        GuardSet guards1 = (GuardSet) o;
+        return size == guards1.size && Objects.deepEquals(guards, guards1.guards);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(size, Arrays.hashCode(guards));
     }
 
     private static void swap(Guard[] guards, int i, int j) {
