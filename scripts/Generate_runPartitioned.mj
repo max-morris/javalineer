@@ -102,7 +102,12 @@ for (int i = 0; i < nChunks; i++) {
     var ready = CompletableFuture.allOf(${readyList});
 
     Runnable task = () -> {
-        chunkTask.run(${viewList});
+        try {
+            chunkTask.run(${viewList});
+        } catch (Exception e) {
+            done.completeExceptionally(e);
+            return;
+        }
         tasksDone.signal();
 
         ${mkRangeRelease(rwList)}
@@ -142,7 +147,12 @@ for (int i = 0; i < ranges.numPartitions(); i++) {
     var ready = CompletableFuture.allOf(${readyList});
 
     Runnable task = () -> {
-        chunkTask.run(${viewList});
+        try {
+            chunkTask.run(${viewList});
+        } catch (Exception e) {
+            done.completeExceptionally(e);
+            return;
+        }
         tasksDone.signal();
 
         ${mkRangeRelease(rwList)}

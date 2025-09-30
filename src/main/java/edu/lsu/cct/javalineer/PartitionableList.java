@@ -15,7 +15,6 @@ public class PartitionableList<E> {
     private final GuardVar<RangeAccountant> rangeAccountant;
     private final CondContext<CondTask1<RangeAccountant>> rangeAccountantCond;
 
-
     public PartitionableList(List<E> data) {
         this.data = data;
         this.rangeAccountant = new GuardVar<>(new RangeAccountant());
@@ -164,7 +163,12 @@ public class PartitionableList<E> {
 
             Runnable task = () -> {
                 final var view = new ReadWritePartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
-                chunkTask.run(view);
+                try {
+                    chunkTask.run(view);
+                } catch (Exception e) {
+                    done.completeExceptionally(e);
+                    return;
+                }
                 tasksDone.signal();
                 this.rangeAccountant.runGuarded((rangeAccountantVar) -> {
                     rangeAccountantVar.get().release(PartIntentKind.ReadWrite, lo, hi, nGhosts);
@@ -206,7 +210,12 @@ public class PartitionableList<E> {
 
             Runnable task = () -> {
                 final var view = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
-                chunkTask.run(view);
+                try {
+                    chunkTask.run(view);
+                } catch (Exception e) {
+                    done.completeExceptionally(e);
+                    return;
+                }
                 tasksDone.signal();
                 this.rangeAccountant.runGuarded((rangeAccountantVar) -> {
                     rangeAccountantVar.get().release(PartIntentKind.ReadOnly, lo, hi, nGhosts);
@@ -248,7 +257,12 @@ public class PartitionableList<E> {
 
             Runnable task = () -> {
                 final var view = new WriteOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
-                chunkTask.run(view);
+                try {
+                    chunkTask.run(view);
+                } catch (Exception e) {
+                    done.completeExceptionally(e);
+                    return;
+                }
                 tasksDone.signal();
                 this.rangeAccountant.runGuarded((rangeAccountantVar) -> {
                     rangeAccountantVar.get().release(PartIntentKind.WriteOnly, lo, hi, nGhosts);
@@ -290,7 +304,12 @@ public class PartitionableList<E> {
 
             Runnable task = () -> {
                 final var view = new ReadWritePartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
-                chunkTask.run(view);
+                try {
+                    chunkTask.run(view);
+                } catch (Exception e) {
+                    done.completeExceptionally(e);
+                    return;
+                }
                 tasksDone.signal();
                 this.rangeAccountant.runGuarded((rangeAccountantVar) -> {
                     rangeAccountantVar.get().release(PartIntentKind.ReadWrite, lo, hi, nGhosts);
@@ -332,7 +351,12 @@ public class PartitionableList<E> {
 
             Runnable task = () -> {
                 final var view = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
-                chunkTask.run(view);
+                try {
+                    chunkTask.run(view);
+                } catch (Exception e) {
+                    done.completeExceptionally(e);
+                    return;
+                }
                 tasksDone.signal();
                 this.rangeAccountant.runGuarded((rangeAccountantVar) -> {
                     rangeAccountantVar.get().release(PartIntentKind.ReadOnly, lo, hi, nGhosts);
@@ -374,7 +398,12 @@ public class PartitionableList<E> {
 
             Runnable task = () -> {
                 final var view = new WriteOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
-                chunkTask.run(view);
+                try {
+                    chunkTask.run(view);
+                } catch (Exception e) {
+                    done.completeExceptionally(e);
+                    return;
+                }
                 tasksDone.signal();
                 this.rangeAccountant.runGuarded((rangeAccountantVar) -> {
                     rangeAccountantVar.get().release(PartIntentKind.WriteOnly, lo, hi, nGhosts);
