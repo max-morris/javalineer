@@ -167,6 +167,8 @@ public class PartitionableList<E> {
                     chunkTask.run(view);
                 } catch (Exception e) {
                     done.completeExceptionally(e);
+                    System.err.println("Error in chunk task: " + e.getMessage() + " in chunk " + partNum + " of " + nChunks + " with range " + lo + " to " + hi + " and " + chunkSize + " elements");
+                    System.exit(0xdeadbeef);
                     return;
                 }
                 tasksDone.signal();
@@ -214,6 +216,8 @@ public class PartitionableList<E> {
                     chunkTask.run(view);
                 } catch (Exception e) {
                     done.completeExceptionally(e);
+                    System.err.println("Error in chunk task: " + e.getMessage() + " in chunk " + partNum + " of " + nChunks + " with range " + lo + " to " + hi + " and " + chunkSize + " elements");
+                    System.exit(0xdeadbeef);
                     return;
                 }
                 tasksDone.signal();
@@ -261,6 +265,8 @@ public class PartitionableList<E> {
                     chunkTask.run(view);
                 } catch (Exception e) {
                     done.completeExceptionally(e);
+                    System.err.println("Error in chunk task: " + e.getMessage() + " in chunk " + partNum + " of " + nChunks + " with range " + lo + " to " + hi + " and " + chunkSize + " elements");
+                    System.exit(0xdeadbeef);
                     return;
                 }
                 tasksDone.signal();
@@ -308,6 +314,8 @@ public class PartitionableList<E> {
                     chunkTask.run(view);
                 } catch (Exception e) {
                     done.completeExceptionally(e);
+                    System.err.println("Error in chunk task: " + e.getMessage() + " in chunk " + partNum + " of " + ranges.numPartitions() + " with range " + lo + " to " + hi + " and " + chunkSize + " elements");
+                    System.exit(0xdeadbeef);
                     return;
                 }
                 tasksDone.signal();
@@ -355,6 +363,8 @@ public class PartitionableList<E> {
                     chunkTask.run(view);
                 } catch (Exception e) {
                     done.completeExceptionally(e);
+                    System.err.println("Error in chunk task: " + e.getMessage() + " in chunk " + partNum + " of " + ranges.numPartitions() + " with range " + lo + " to " + hi + " and " + chunkSize + " elements");
+                    System.exit(0xdeadbeef);
                     return;
                 }
                 tasksDone.signal();
@@ -402,6 +412,8 @@ public class PartitionableList<E> {
                     chunkTask.run(view);
                 } catch (Exception e) {
                     done.completeExceptionally(e);
+                    System.err.println("Error in chunk task: " + e.getMessage() + " in chunk " + partNum + " of " + ranges.numPartitions() + " with range " + lo + " to " + hi + " and " + chunkSize + " elements");
+                    System.exit(0xdeadbeef);
                     return;
                 }
                 tasksDone.signal();
