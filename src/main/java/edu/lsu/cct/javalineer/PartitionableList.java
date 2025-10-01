@@ -311,7 +311,9 @@ public class PartitionableList<E> {
             Runnable task = () -> {
                 final var view = new ReadWritePartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
                 try {
+                    Debug.reallyPrintln("pre");
                     chunkTask.run(view);
+                    Debug.reallyPrintln("post");
                 } catch (Exception e) {
                     done.completeExceptionally(e);
                     System.err.println("Error in chunk task: " + e.getMessage() + " in chunk " + partNum + " of " + ranges.numPartitions() + " with range " + lo + " to " + hi + " and " + chunkSize + " elements");
