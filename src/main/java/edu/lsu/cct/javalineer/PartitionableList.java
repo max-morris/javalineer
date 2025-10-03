@@ -34,6 +34,10 @@ public final class PartitionableList<E> {
         this.rangeAccountantCond = CondContext.newCond(this.rangeAccountant);
     }
 
+    public int size() {
+        return data.size();
+    }
+
     public static <E> PartitionableList<E> of(int size, IntFunction<E> fillFunction) {
         return new PartitionableList<E>(size, fillFunction);
     }
