@@ -10,10 +10,10 @@ import java.util.function.Function;
 import java.util.function.IntFunction;
 
 @SuppressWarnings({"unused", "CodeBlock2Expr"})
-public class PartitionableList<E> {
-    private final List<E> data;
-    private final GuardVar<RangeAccountant> rangeAccountant;
-    private final CondContext<CondTask1<RangeAccountant>> rangeAccountantCond;
+public final class PartitionableList<E> {
+    final List<E> data;
+    final GuardVar<RangeAccountant> rangeAccountant;
+    final CondContext<CondTask1<RangeAccountant>> rangeAccountantCond;
 
     public PartitionableList(List<E> data) {
         this.data = data;

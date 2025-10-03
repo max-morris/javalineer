@@ -1,0 +1,281 @@
+#!/usr/bin/env flour
+
+import lists;
+
+let final NT = 5;
+
+fn mkIntentArgs(rwList: list<string>) -> string {
+    let args = <string>[];
+
+    for rw in rwList.enumerate() {
+        let j = 1 + rw.0;
+        args <- "${rw.1}PartIntent<T${j}> pi${j}";
+    }
+
+    args.join(",\n")
+}
+
+fn mkChunkTask(rwList: list<string>) -> string {
+    let args = <string>[];
+
+    for rw in rwList.enumerate() {
+        let j = 1 + rw.0;
+        args <- "${rw.1}PartListView<T${j}>";
+    }
+
+    let n = rwList.len();
+    let argsStr = args.join(",\n");
+
+    "PartTask${n}<\n${argsStr}, CompletableFuture<Void>> chunkTask"
+}
+
+fn mkVoidChunkTask(rwList: list<string>) -> string {
+    let args = <string>[];
+
+    for rw in rwList.enumerate() {
+        let j = 1 + rw.0;
+        args <- "${rw.1}PartListView<T${j}>";
+    }
+
+    let n = rwList.len();
+    let argsStr = args.join(",\n");
+
+    "VoidPartTask${n}<\n${argsStr}> chunkTask"
+}
+
+fn mkListInits(n: int) -> string {
+    ["final var list${i} = pi${i}.getUnderlying();" | i in [1..=n]].join("\n")
+}
+
+fn mkViewInits(rwList: list<string>) -> string {
+    (for rw in rwList.enumerate() {
+        let j = rw.0 + 1;
+        push ##
+final var data${j} = list${j}.data;
+final var dataSize${j} = data${j}.size();
+final var lo${j} = partIndex(partNum, nChunks, dataSize${j}, nGhosts);
+final var hi${j} = partIndex(partNum + 1, nChunks, dataSize${j}, nGhosts);
+final var chunkSize${j} = hi${j} - lo${j};
+final var view${j} = new ${rw.1}PartListView<>(data${j}, lo${j}, chunkSize${j}, nGhosts, partNum, list${j});
+        ##;
+    }).join("\n\n")
+}
+
+fn mkViewInits2(rwList: list<string>) -> string {
+    (for rw in rwList.enumerate() {
+        let j = rw.0 + 1;
+        push ##
+final var data${j} = list${j}.data;
+final var lo${j} = ranges.getWritableBegin(partNum);
+final var hi${j} = ranges.getWritableEnd(partNum);
+final var chunkSize${j} = hi${j} - lo${j};
+final var view${j} = new ${rw.1}PartListView<>(data${j}, lo${j}, chunkSize${j}, nGhosts, partNum, list${j});
+        ##;
+    }).join("\n\n")
+}
+
+fn mkReadyInits(rwList: list<string>) -> string {
+    (for rw in rwList.enumerate() {
+            let j = rw.0 + 1;
+            push ##
+final var ready${j} = Guard.runCondition(list${j}.rangeAccountantCond, (rangeAccountantVar) -> {
+    return rangeAccountantVar.get().isRangeOk(PartIntentKind.${rw.1}, lo${j}, hi${j}, nGhosts);
+});
+        ##;
+    }).join("\n\n")
+}
+
+fn mkRangeRelease(rwList: list<string>) -> string {
+    (for rw in rwList.enumerate() {
+                let j = rw.0 + 1;
+                push ##
+list${j}.rangeAccountant.runGuarded((rangeAccountantVar) -> {
+    rangeAccountantVar.get().release(PartIntentKind.${rw.1}, lo${j}, hi${j}, nGhosts);
+    list${j}.rangeAccountantCond.signalAll();
+});
+        ##;
+    }).join("\n\n")
+}
+
+fn mkRunPartedFutBody(rwList: list<string>) -> string {
+    let readyList = ["ready${i}" | i in [1..=rwList.len()]].join(", ");
+    let viewList = ["view${i}" | i in [1..=rwList.len()]].join(", ");
+
+    ##
+
+final var done = new CompletableFuture<Void>();
+final var tasksDone = new CountdownLatch(nChunks);
+
+${mkListInits(rwList.len())}
+
+for (int i = 0; i < nChunks; i++) {
+    final var partNum = i;
+    ${mkViewInits(rwList)}
+    ${mkReadyInits(rwList)}
+
+    var ready = CompletableFuture.allOf(${readyList});
+
+    Runnable task = () -> {
+        try {
+            chunkTask.apply(${viewList}).thenAccept(res -> {
+                tasksDone.signal();
+                ${mkRangeRelease(rwList)}
+            });
+        } catch (Exception e) {
+            done.completeExceptionally(e);
+            System.err.println("Error in chunk task: " + e.getMessage() + " in chunk " + partNum + " of " + nChunks);
+            System.exit(0xdeadbeef);
+            return;
+        }
+    };
+
+    if (partNum == nChunks - 1) {
+        ready.thenRun(task);
+    } else {
+        ready.thenRunAsync(task, Pool.getPool());
+    }
+}
+
+tasksDone.getFut().thenRun(() -> {
+    done.complete(null);
+});
+
+return done;
+
+    ##.trim()
+}
+
+fn mkRunPartedFutBody2(rwList: list<string>) -> string {
+    let readyList = ["ready${i}" | i in [1..=rwList.len()]].join(", ");
+    let viewList = ["view${i}" | i in [1..=rwList.len()]].join(", ");
+
+    ##
+
+final var done = new CompletableFuture<Void>();
+final var tasksDone = new CountdownLatch(ranges.numPartitions());
+
+${mkListInits(rwList.len())}
+
+for (int i = 0; i < ranges.numPartitions(); i++) {
+    final var partNum = i;
+    ${mkViewInits2(rwList)}
+    ${mkReadyInits(rwList)}
+
+    var ready = CompletableFuture.allOf(${readyList});
+
+    Runnable task = () -> {
+        try {
+            chunkTask.apply(${viewList}).thenAccept(res -> {
+                tasksDone.signal();
+                ${mkRangeRelease(rwList)}
+            });
+        } catch (Exception e) {
+            done.completeExceptionally(e);
+            System.err.println("Error in chunk task: " + e.getMessage() + " in chunk " + partNum + " of " + ranges.numPartitions());
+            System.exit(0xdeadbeef);
+            return;
+        }
+    };
+
+    if (partNum == ranges.numPartitions() - 1) {
+        ready.thenRun(task);
+    } else {
+        ready.thenRunAsync(task, Pool.getPool());
+    }
+}
+
+tasksDone.getFut().thenRun(() -> {
+    done.complete(null);
+});
+
+return done;
+
+    ##.trim()
+}
+
+fn emitRunParted(tpList: list<string>, rwList: list<string>) {
+    let piList = ["pi${i}" | i in [1..=rwList.len()]].join(", ");
+    let access = if rwList.contains("ReadWrite") {
+        "private"
+    } else {
+        "public"
+    };
+
+    println(
+        ##
+public static <${tpList.join(', ')}> CompletableFuture<Void> runPartitionedFut(
+    int nChunks,
+    ${mkIntentArgs(rwList)},
+    ${mkChunkTask(rwList)}
+) {
+    return runPartitionedFut(nChunks, 0, ${piList}, chunkTask);
+}
+
+        ##.trimMulti()
+    );
+
+    println(
+        ##
+
+${access} static <${tpList.join(', ')}> CompletableFuture<Void> runPartitionedFut(
+    int nChunks, int nGhosts,
+    ${mkIntentArgs(rwList)},
+    ${mkChunkTask(rwList)}
+) {
+    ${mkRunPartedFutBody(rwList)}
+}
+
+        ##.trimMulti()
+    );
+    println("");
+
+    println(
+        ##
+public static <${tpList.join(', ')}> CompletableFuture<Void> runPartitionedFut(
+    PartitionRangeProvider ranges,
+    ${mkIntentArgs(rwList)},
+    ${mkChunkTask(rwList)}
+) {
+    return runPartitionedFut(ranges, 0, ${piList}, chunkTask);
+}
+
+        ##.trimMulti()
+    );
+    println("");
+
+    println(
+        ##
+
+${access} static <${tpList.join(', ')}> CompletableFuture<Void> runPartitionedFut(
+    PartitionRangeProvider ranges, int nGhosts,
+    ${mkIntentArgs(rwList)},
+    ${mkChunkTask(rwList)}
+) {
+    ${mkRunPartedFutBody2(rwList)}
+}
+
+        ##.trimMulti()
+    );
+    println("");
+}
+
+fn main() {
+    println("// region Generated by Generate_runPartitioned_ext.mj");
+
+    for i in [1..=NT] {
+        let typeParams = ["T${t}" | t in [1..=i]];
+        for j in [0..=i] {
+            for k in [0..=(i-j)] {
+                let rwList = ["ReadOnly"] * j + ["WriteOnly"] * k + ["ReadWrite"] * (i - j - k);
+                for p in rwList.permutations().uniqueElements() {
+                    emitRunParted(typeParams, p);
+                }
+            }
+
+        }
+    }
+
+    println("// endregion");
+}
+
+main();

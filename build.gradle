@@ -40,6 +40,12 @@ ext.codegenEntries = [
         target: 'src/main/java/edu/lsu/cct/javalineer/PartitionableList.java',
         generator: 'scripts/Generate_runPartitioned.mj',
         marker: '/* CODEGEN: generatePartitionableListOverloads */'
+    ],
+    [
+        name: 'generatePartitionableListOverloadsExt',
+        target: 'src/main/java/edu/lsu/cct/javalineer/PartitionableListExt.java',
+        generator: 'scripts/Generate_runPartitioned_ext.mj',
+        marker: '/* CODEGEN: generatePartitionableListOverloadsExt */'
     ]
 ]
 
@@ -185,6 +191,10 @@ def codegenTasks = codegenEntries.collect {
 
 // Ensure compilation uses the generated files when present
 tasks.named('compileJava') {
+    dependsOn codegenTasks
+}
+
+tasks.named('compileTestsJava') {
     dependsOn codegenTasks
 }
 
