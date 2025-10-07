@@ -7,7 +7,7 @@ import java.util.concurrent.CompletableFuture;
 
 public class Latch<T> {
     private final CondContext<CondTask1<T>> cond;
-    private final CompletableFuture<?> fut;
+    private final CompletableFuture<Void> fut;
 
     public Latch(T initial, CondCheck1<T> task) {
         cond = CondContext.newCond(new GuardVar<>(initial));
@@ -18,7 +18,7 @@ public class Latch<T> {
         cond.signal();
     }
 
-    public final CompletableFuture<?> getFut() {
+    public final CompletableFuture<Void> getFut() {
         return fut;
     }
 
