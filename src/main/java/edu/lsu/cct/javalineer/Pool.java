@@ -43,11 +43,15 @@ public class Pool {
         } catch (IOException ignored) { }
     }
 
-    public static void run(Runnable task) {
+    public static CompletableFuture<Void> run(Runnable task) {
+        var done = new CompletableFuture<Void>();
+
         thePool.execute(() -> {
             try {
                 task.run();
+                done.complete(null);
             } catch (Throwable t) {
+                done.completeExceptionally(t);
                 var sw = new StringWriter();
                 var pw = new PrintWriter(sw);
                 pw.println("Pool.run(): Exception in thread " + Thread.currentThread().getName() + ":");
@@ -55,6 +59,8 @@ public class Pool {
                 reallyPrintln(sw);
             }
         });
+
+        return done;
     }
 
     public static <T> CompletableFuture<T> run(Supplier<CompletableFuture<T>> task) {
@@ -64,6 +70,11 @@ public class Pool {
             task.get().whenComplete((result, throwable) -> {
                 if (throwable != null) {
                     done.completeExceptionally(throwable);
+                    var sw = new StringWriter();
+                    var pw = new PrintWriter(sw);
+                    pw.println("Pool.run(): Exception in thread " + Thread.currentThread().getName() + ":");
+                    throwable.printStackTrace(pw);
+                    reallyPrintln(sw);
                 } else {
                     done.complete(result);
                 }
