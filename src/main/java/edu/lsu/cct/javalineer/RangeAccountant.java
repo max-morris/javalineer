@@ -1,11 +1,10 @@
 package edu.lsu.cct.javalineer;
 
-import java.util.Objects;
+import java.util.*;
 import java.util.Set;
-import java.util.HashSet;
 
 public class RangeAccountant {
-    private final Set<Range> readRanges = new HashSet<>();
+    private final Map<Range, Integer> readRanges = new HashMap<>();
     private final Set<Range> writeRanges = new HashSet<>();
 
     @SuppressWarnings("AssignmentUsedAsCondition")
@@ -14,8 +13,7 @@ public class RangeAccountant {
         switch (kind) {
             case ReadOnly:
                 if (ok = isReadOk(startDesired - nGhosts, endDesired + nGhosts)) {
-                    var inserted = readRanges.add(new Range(startDesired - nGhosts, endDesired + nGhosts));
-                    assert inserted;
+                    insertRead(new Range(startDesired - nGhosts, endDesired + nGhosts));
                 }
                 return ok;
             case WriteOnly:
@@ -26,8 +24,8 @@ public class RangeAccountant {
                 return ok;
             case ReadWrite:
                 if (ok = isReadOk(startDesired - nGhosts, endDesired + nGhosts) && isWriteOk(startDesired, endDesired)) {
-                    var inserted = readRanges.add(new Range(startDesired - nGhosts, endDesired + nGhosts));
-                    inserted &= writeRanges.add(new Range(startDesired, endDesired));
+                    insertRead(new Range(startDesired - nGhosts, endDesired + nGhosts));
+                    var inserted = writeRanges.add(new Range(startDesired, endDesired));
                     assert inserted;
                 }
                 return ok;
@@ -38,21 +36,45 @@ public class RangeAccountant {
 
     public void release(PartIntentKind kind, int startDesired, int endDesired, int nGhosts) {
         boolean removed;
+        Range rr;
         switch (kind) {
             case ReadOnly:
-                removed = readRanges.remove(new Range(startDesired - nGhosts, endDesired + nGhosts));
-                assert removed;
+                rr = new Range(startDesired - nGhosts, endDesired + nGhosts);
+                assert readRanges.containsKey(rr);
+                removeRead(rr);
                 break;
             case WriteOnly:
                 removed = writeRanges.remove(new Range(startDesired, endDesired));
                 assert removed;
                 break;
             case ReadWrite:
-                removed = readRanges.remove(new Range(startDesired - nGhosts, endDesired + nGhosts));
-                removed &= writeRanges.remove(new Range(startDesired, endDesired));
+                rr = new Range(startDesired - nGhosts, endDesired + nGhosts);
+                assert readRanges.containsKey(rr);
+                removeRead(rr);
+                removed = writeRanges.remove(new Range(startDesired, endDesired));
                 assert removed;
                 break;
         }
+    }
+
+    private void removeRead(Range rr) {
+        readRanges.computeIfPresent(rr, (k, v) -> {
+            if (v.equals(1)) {
+                return null;
+            } else {
+                return v - 1;
+            }
+        });
+    }
+
+    private void insertRead(Range rr) {
+        readRanges.compute(rr, (k, v) -> {
+            if (v == null) {
+                return 1;
+            } else {
+                return v + 1;
+            }
+        });
     }
 
     private boolean isReadOk(int startDesired, int endDesired) {
@@ -70,7 +92,7 @@ public class RangeAccountant {
             return false;
         }
 
-        for (var range : readRanges) {
+        for (var range : readRanges.keySet()) {
             if (range.start < endDesired && range.end > startDesired) {
                 return false;
             }
