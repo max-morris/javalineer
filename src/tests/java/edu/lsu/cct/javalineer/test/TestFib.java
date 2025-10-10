@@ -33,17 +33,10 @@ public class TestFib {
         Test.requireAssert();
 
         final int origin = 5, bound = 40;
-        var doneLatch = new CountdownLatch(bound - origin);
-
-        for (int i = origin; i < bound; i++) {
-            final int f = i;
-            fib(f).thenAccept(n -> {
-                System.out.printf("fib(%d)=%d%n", f, n);
-                assert n == fibc(f);
-                doneLatch.signal();
+        Loop.marchingForEach(origin, bound,(n)->{
+            return fib(n).thenAccept(n2 -> {
+                System.out.printf("fib(%d)=%d%n", n, n2);
             });
-        }
-
-        doneLatch.join();
+        }).join();
     }
 }
