@@ -28,60 +28,57 @@ public class TestBank3 {
     public static void main(String[] args) {
         Test.requireAssert();
 
-        var doneLatch = new CountdownLatch(3000);
-
         GuardVar<Bank> a = new GuardVar<>(new Bank());
         GuardVar<Bank> b = new GuardVar<>(new Bank());
 
         var aNotEmpty = Guard.newCondition(a);
         var bNotEmpty = Guard.newCondition(a, b);
 
-        for (int i = 0; i < 1000; i++) {
+        final CompletableFuture<Integer> done = new CompletableFuture<>();
+
+        Loop.parForEach(0,1000,(i)->{
+            final CompletableFuture<Void> withdrawFut = new CompletableFuture<>();
             Pool.run(() -> {
                 Guard.runCondition(aNotEmpty, (Var<Bank> bankA) -> {
                     boolean b2 = bankA.get().withdraw(1);
                     if (b2) {
                         wc.getAndIncrement();
-                        doneLatch.signal();
+                        withdrawFut.complete(null);
                     }
                     return b2;
                 });
             });
+            final CompletableFuture<Void> transferFut = new CompletableFuture<>();
             Pool.run(() -> {
                 Guard.runCondition(bNotEmpty, (Var<Bank> bankA, Var<Bank> bankB) -> {
                     if (bankB.get().withdraw(1)) {
                         bankA.get().deposit(1);
                         aNotEmpty.signal();
                         tc.getAndIncrement();
-                        doneLatch.signal();
+                        transferFut.complete(null);
                         return true;
                     } else {
                         return false;
                     }
                 });
             });
+            final CompletableFuture<Void> depositFut = new CompletableFuture<>();
             Pool.run(() -> {
                 Guard.runGuarded(b, (Var<Bank> bankB) -> {
                     bankB.get().deposit(1);
                     bNotEmpty.signal();
                     dc.getAndIncrement();
-                    doneLatch.signal();
+                    depositFut.complete(null);
                 });
             });
-        }
-
-        doneLatch.join();
-
-        int[] out = new int[1];
-        System.out.println("wc=" + wc + ", tc=" + tc + ", dc=" + dc);
-
-        var done = new CompletableFuture<Void>();
-        a.runGuarded((bank) -> {
-            out[0] = bank.get().balance;
-            assert out[0] == 0 : out[0];
-            done.complete(null);
+            return CompletableFuture.allOf(withdrawFut, depositFut, transferFut);
+        }).thenRun(()->{
+            a.runGuarded((bank) -> {
+                done.complete(bank.get().balance);
+            });
         });
-
-        done.join();
+        assert done.join() == 0;
+        System.out.println("wc=" + wc + ", tc=" + tc + ", dc=" + dc);
+        assert wc.get() == tc.get() && tc.get() == dc.get();
     }
 }

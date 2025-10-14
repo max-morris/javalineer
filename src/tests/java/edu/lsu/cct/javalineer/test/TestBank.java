@@ -3,6 +3,7 @@ package edu.lsu.cct.javalineer.test;
 import edu.lsu.cct.javalineer.*;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 public class TestBank {
 
@@ -28,36 +29,37 @@ public class TestBank {
     public static void main(String[] args) {
         Test.requireAssert();
 
-        var doneLatch = new CountdownLatch(2000);
-
         GuardVar<Bank> a = new GuardVar<>(new Bank());
+        CompletableFuture<Integer> done = new CompletableFuture<>();
 
-        for (int i = 0; i < 1000; i++) {
+        Loop.parForEach(0,100,(i)->{
+            final CompletableFuture<Void> withdrawFut = new CompletableFuture<>();
             Pool.run(() -> {
                 a.runGuarded((bank) -> {
                     if (!bank.get().withdraw(1))
                         failures++;
-                    doneLatch.signal();
+                    withdrawFut.complete(null);
                 });
             });
+            final CompletableFuture<Void> depositFut = new CompletableFuture<>();
             Pool.run(() -> {
                 a.runGuarded((bank) -> {
                     bank.get().deposit(1);
-                    doneLatch.signal();
+                    depositFut.complete(null);
                 });
             });
-        }
-
-        doneLatch.join();
-        int[] out = new int[1];
-
-        var done = new CompletableFuture<Void>();
-        a.runGuarded((bank) -> {
-            out[0] = bank.get().balance;
-            assert out[0] == failures;
-            done.complete(null);
+            return CompletableFuture.allOf(withdrawFut, depositFut);
+        }).thenRun(() -> {
+            a.runGuarded((bank) -> {
+                int balance = -1;
+                try {
+                    balance = bank.get().balance;
+                    assert balance == failures;
+                } finally {
+                    done.complete(balance);
+                }
+            });
         });
-
-        done.join();
+        System.out.println("failures = "+done.join());
     }
 }
