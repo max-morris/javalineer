@@ -27,42 +27,36 @@ public class TestBank2 {
 
     public static void main(String[] args) {
         Test.requireAssert();
-
-        var doneLatch = new CountdownLatch(2000);
-
         GuardVar<Bank> a = new GuardVar<>(new Bank());
         var bankNotEmpty = Guard.newCondition(a);
+        CompletableFuture<Integer> done = new CompletableFuture<>();
 
-        for (int i = 0; i < 1000; i++) {
+        Loop.parForEach(0,1000,(i)->{
+            final CompletableFuture<Void> withdrawFut = new CompletableFuture<>();
             Pool.run(() -> {
                 Guard.runCondition(bankNotEmpty, bank -> {
                     if (bank.get().withdraw(1)) {
-                        doneLatch.signal();
+                        withdrawFut.complete(null);
                         return true;
                     } else {
                         return false;
                     }
                 });
             });
+            final CompletableFuture<Void> depositFut = new CompletableFuture<>();
             Pool.run(() -> {
                 Guard.runGuarded(a, bank -> {
                     bank.get().deposit(1);
                     bankNotEmpty.signal();
-                    doneLatch.signal();
+                    depositFut.complete(null);
                 });
             });
-        }
-
-        doneLatch.join();
-        int[] out = new int[1];
-
-        var done = new CompletableFuture<Void>();
-        a.runGuarded((bank) -> {
-            out[0] = bank.get().balance;
-            assert out[0] == 0;
-            done.complete(null);
+            return CompletableFuture.allOf(withdrawFut, depositFut);
+        }).thenRun(()->{
+            a.runGuarded((bank) -> {
+                done.complete(bank.get().balance);
+            });
         });
-
-        done.join();
+        assert done.join() == 0;
     }
 }

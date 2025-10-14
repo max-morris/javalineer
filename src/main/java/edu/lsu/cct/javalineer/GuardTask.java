@@ -48,7 +48,15 @@ public class GuardTask {
             for (Guard g : guardsHeld)
                 assert g.locked.get();
         }
-        r.run();
+        try {
+            r.run();
+        } catch (RuntimeException | Error ex) {
+            ex.printStackTrace();
+            throw ex;
+        } catch(Exception ex) {
+            ex.printStackTrace();
+            throw new RuntimeException(ex);
+        }
     }
 
     public void run() {
