@@ -8,39 +8,20 @@ import java.io.StringWriter;
 import java.io.PrintWriter;
 
 public class Pool {
-    private static Executor thePool = getDefaultPool();
+    private static Executor thePool = createDefaultPool();
 
     public static Executor getPool() {
         return thePool;
-    }
-
-    /**
-     * Sets the pool used by Javalineer. This method is only intended for use when nothing is running, and
-     * therefore makes no attempt to be thread-safe. If the previous pool is an ExecutorService, shutdown()
-     * is called on it.
-     * @param newPool The new pool.
-     */
-    public static void setPool(Executor newPool) {
-        setPool(newPool, true);
-    }
-
-    /**
-     * Sets the pool used by Javalineer. This method is only intended for use when nothing is running, and
-     * therefore makes no attempt to be thread-safe.
-     * @param newPool The new pool.
-     * @param shutdownOld If true, will call shutdown() on the old pool if it is an ExecutorService.
-     */
-    public static void setPool(Executor newPool, boolean shutdownOld) {
-        if (shutdownOld && thePool instanceof ExecutorService) {
-            ((ExecutorService) thePool).shutdown();
-        }
-        thePool = newPool;
     }
 
     private static void reallyPrintln(Object o) {
         try (PrintWriter pw = new PrintWriter("/dev/tty")) {
             pw.println(Objects.toString(o));
         } catch (IOException ignored) { }
+    }
+
+    public static void execute(Runnable task) {
+        thePool.execute(task);
     }
 
     public static CompletableFuture<Void> run(Runnable task) {
@@ -84,7 +65,7 @@ public class Pool {
         return done;
     }
 
-    public static ThreadFactory getDefaultThreadFactory() {
+    private static ThreadFactory getDefaultThreadFactory() {
         return r -> {
             var t = Executors.defaultThreadFactory().newThread(r);
             t.setDaemon(true);
@@ -92,7 +73,14 @@ public class Pool {
         };
     }
 
-    public static Executor getDefaultPool() {
-        return Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(), getDefaultThreadFactory());
+    public static Executor createDefaultPool() {
+        String pool = System.getProperty("JAVALINEER_POOL", null);
+        if(pool == null || pool.equals("fixed")) {
+            return Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(), getDefaultThreadFactory());
+        } else if (pool.equals("debug")) {
+            return new DebugPool();
+        } else {
+            throw new RuntimeException("Invalid JAVALINEER_POOL value: " + pool);
+        }
     }
 }
