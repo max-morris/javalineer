@@ -36,7 +36,7 @@ public class TestBank3 {
 
         final CompletableFuture<Integer> done = new CompletableFuture<>();
 
-        Loop.parForEach(0,1000,(i)->{
+        Loop.parFor(0,1000,(i)->{
             final CompletableFuture<Void> withdrawFut = new CompletableFuture<>();
             Pool.run(() -> {
                 Guard.runCondition(aNotEmpty, (Var<Bank> bankA) -> {

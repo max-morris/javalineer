@@ -33,7 +33,7 @@ public class TestFib {
         Test.requireAssert();
 
         final int origin = 5, bound = 40;
-        Loop.marchingForEach(origin, bound,(n)->{
+        Loop.marchingFor(origin, bound,(n)->{
             return fib(n).thenAccept(n2 -> {
                 System.out.printf("fib(%d)=%d%n", n, n2);
             });

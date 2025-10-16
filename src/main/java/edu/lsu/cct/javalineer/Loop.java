@@ -5,7 +5,7 @@ import java.util.concurrent.CompletableFuture;
 
 public class Loop {
 
-    public static CompletableFuture<?> parForEach(int i0, int iN, Function<Integer, CompletableFuture<Void>> body) {
+    public static CompletableFuture<?> parFor(int i0, int iN, Function<Integer, CompletableFuture<Void>> body) {
         var done = new CountdownLatch(iN - i0);
 
         for (int i = i0; i < iN; i++) {
@@ -18,7 +18,7 @@ public class Loop {
         return done.getFut();
     }
 
-    public static CompletableFuture<Void> marchingForEach(int i0, int iN, Function<Integer, CompletableFuture<Void>> body) {
+    public static CompletableFuture<Void> marchingFor(int i0, int iN, Function<Integer, CompletableFuture<Void>> body) {
         CompletableFuture<Void> cf = CompletableFuture.completedFuture(null);
 
         for (int i = i0; i < iN; i++) {
@@ -30,7 +30,7 @@ public class Loop {
     }
 
     public static void main(String[] args) throws Exception {
-        var f = marchingForEach(0, 10, (i0) -> {
+        var f = marchingFor(0, 10, (i0) -> {
             final CompletableFuture<Void> cf = new CompletableFuture<>();
             Runnable r = () -> {
                 try {

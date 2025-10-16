@@ -32,7 +32,7 @@ public class TestBank {
         GuardVar<Bank> a = new GuardVar<>(new Bank());
         CompletableFuture<Integer> done = new CompletableFuture<>();
 
-        Loop.parForEach(0,100,(i)->{
+        Loop.parFor(0,100,(i)->{
             final CompletableFuture<Void> withdrawFut = new CompletableFuture<>();
             Pool.run(() -> {
                 a.runGuarded((bank) -> {

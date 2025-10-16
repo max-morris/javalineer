@@ -29,7 +29,7 @@ public class Heat {
         }));
         y.add(PartitionableList.of(N, (i) -> 0.0));
 
-        Loop.marchingForEach(0, N_ITER, (timeStep) -> {
+        Loop.marchingFor(0, N_ITER, (timeStep) -> {
             CompletableFuture<Void> fut = new CompletableFuture<>();
             PartitionableList.runPartitioned(N_THREADS, 1, y.get(0).read(), y.get(1).write(), (y0_, y1_) -> {
                 final double c = dt*DIFFUSION_CONSTANT/dx/dx;

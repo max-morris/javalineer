@@ -27,7 +27,7 @@ public class TestReadWriteGuard {
         final AtomicInteger readCounter = new AtomicInteger(0);
         final int[] writeCounter = {0};
         ReadWriteGuard g = new ReadWriteGuard();
-        Loop.parForEach(0, LOOP_COUNT, (j)->{
+        Loop.parFor(0, LOOP_COUNT, (j)->{
             artificialWork();
             CompletableFuture<Void> cf = new CompletableFuture<>();
             if (j % WRITE_EVERY == 0) {
