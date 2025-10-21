@@ -5,7 +5,7 @@ import java.util.concurrent.CompletableFuture;
 
 public class Loop {
 
-    public static CompletableFuture<?> parFor(int i0, int iN, Function<Integer, CompletableFuture<Void>> body) {
+    public static CompletableFuture<Void> parFor(int i0, int iN, Function<Integer, CompletableFuture<Void>> body) {
         var done = new CountdownLatch(iN - i0);
 
         for (int i = i0; i < iN; i++) {
