@@ -8,21 +8,29 @@ import java.util.concurrent.Executor;
 public class DebugPool implements Executor {
 
     String seed;
+
     public DebugPool() {
         seed = System.getProperty("JAVALINEER_DEBUG_POOL_SEED", null);
+
         if (seed == null) {
-            seed = ""+RANDOM.nextInt();
+            seed = "" + RANDOM.nextInt();
+            System.out.println("JAVALINEER_DEBUG_POOL_SEED was unset; using random seed: " + seed);
+        } else {
+            System.out.println("Using JAVALINEER_DEBUG_POOL_SEED: " + seed);
         }
-        System.out.println("SEED: "+seed);
+
         try {
             RANDOM.setSeed(Integer.parseInt(seed));
         } catch (NumberFormatException e) {
-            System.err.println("Invalid seed: '"+seed+"'");
+            System.err.println("Invalid JAVALINEER_DEBUG_POOL_SEED: '" + seed + "'");
             throw new RuntimeException(e);
+        } finally {
+            System.out.flush();
         }
     }
+
     public String toString() {
-        return "DebugPool("+seed+")";
+        return "DebugPool(" + seed + ")";
     }
 
     List<Runnable> tasks = new ArrayList<>();

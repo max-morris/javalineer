@@ -2,13 +2,14 @@ package edu.lsu.cct.javalineer;
 
 import java.io.IOException;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.*;
 import java.util.function.Supplier;
 import java.io.StringWriter;
 import java.io.PrintWriter;
 
 public class Pool {
-    private static Executor thePool = newDefaultPool();
+    private static Executor thePool = initializePool();
 
     /**
      * Retrieves the pool being used by Javalineer.
@@ -17,6 +18,29 @@ public class Pool {
      */
     public static Executor getPool() {
         return thePool;
+    }
+
+    /**
+     * Sets the pool used by Javalineer. This method is only intended for use when nothing is running, and
+     * therefore makes no attempt to be thread-safe. If the previous pool is an ExecutorService, shutdown()
+     * is called on it.
+     * @param newPool The new pool.
+     */
+    public static void setPool(Executor newPool) {
+        setPool(newPool, true);
+    }
+
+    /**
+     * Sets the pool used by Javalineer. This method is only intended for use when nothing is running, and
+     * therefore makes no attempt to be thread-safe.
+     * @param newPool The new pool.
+     * @param shutdownOld If true, will call shutdown() on the old pool if it is an ExecutorService.
+     */
+    public static void setPool(Executor newPool, boolean shutdownOld) {
+        if (shutdownOld && thePool instanceof ExecutorService) {
+            ((ExecutorService) thePool).shutdown();
+        }
+        thePool = newPool;
     }
 
     private static void reallyPrintln(Object o) {
@@ -79,13 +103,44 @@ public class Pool {
     }
 
     public static Executor newDefaultPool() {
-        String pool = System.getProperty("JAVALINEER_POOL", null);
-        if(pool == null || pool.equals("fixed")) {
-            return Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(), getDefaultThreadFactory());
-        } else if (pool.equals("debug")) {
-            return new DebugPool();
-        } else {
-            throw new RuntimeException("Invalid JAVALINEER_POOL value: " + pool);
+        return Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(), getDefaultThreadFactory());
+    }
+
+    public static Executor newFixedPool(int nThreads) {
+        return Executors.newFixedThreadPool(nThreads, getDefaultThreadFactory());
+    }
+
+    public static Executor newDynamicPool() {
+        return Executors.newCachedThreadPool(getDefaultThreadFactory());
+    }
+
+    public static Executor initializePool() {
+        String pool = Optional.ofNullable(System.getProperty("JAVALINEER_POOL", null))
+                              .map(String::toLowerCase)
+                              .map(String::strip)
+                              .orElse("default");
+
+        String nThreadsStr = System.getProperty("JAVALINEER_POOL_THREADS", null);
+        Integer nThreads = null;
+
+        try {
+            nThreads = Integer.parseInt(nThreadsStr, 10);
+        } catch (NumberFormatException ignored) { }
+
+        switch (pool) {
+            case "default":
+            case "fixed":
+                if (nThreads == null) {
+                    return newDefaultPool();
+                } else {
+                    return newFixedPool(nThreads);
+                }
+            case "debug":
+                return new DebugPool();
+            case "dynamic":
+                return newDynamicPool();
+            default:
+                throw new RuntimeException("Invalid JAVALINEER_POOL value: " + pool);
         }
     }
 }
