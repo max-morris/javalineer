@@ -169,8 +169,8 @@ public class Guard implements Comparable<Guard> {
         return ctx.runCondition(c);
     }
 
-    public static <T> void runGuarded(final GuardVar<T> g, final GuardTask1<T> c) {
-        g.runGuarded(() -> c.run(g.var));
+    public static <T> CompletableFuture<Void> runGuarded(final GuardVar<T> g, final GuardTask1<T> c) {
+        return g.runGuarded(() -> c.run(g.var));
     }
 
     public static boolean has(Guard g) {
