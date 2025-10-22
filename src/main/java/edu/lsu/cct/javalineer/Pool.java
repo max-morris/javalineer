@@ -8,8 +8,13 @@ import java.io.StringWriter;
 import java.io.PrintWriter;
 
 public class Pool {
-    private static Executor thePool = getDefaultPool();
+    private static Executor thePool = newDefaultPool();
 
+    /**
+     * Retrieves the pool being used by Javalineer.
+     *
+     * @return The pool.
+     */
     public static Executor getPool() {
         return thePool;
     }
@@ -92,7 +97,7 @@ public class Pool {
         };
     }
 
-    public static Executor getDefaultPool() {
+    public static Executor newDefaultPool() {
         return Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(), getDefaultThreadFactory());
     }
 }

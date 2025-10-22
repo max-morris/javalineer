@@ -36,8 +36,15 @@ public class Guard implements Comparable<Guard> {
 
     final AtomicReference<GuardTask> next = new AtomicReference<>();
 
-    public void runGuarded(Runnable r) {
-        runGuarded_(GuardSet.of(this), r);
+    public CompletableFuture<Void> runGuarded(Runnable r) {
+        var done = new CompletableFuture<Void>();
+        
+        runGuarded_(GuardSet.of(this), () -> {
+            r.run();
+            done.complete(null);
+        });
+        
+        return done;
     }
 
     private void runGuarded_(GuardSet guardsHeld, Runnable r) {
@@ -66,27 +73,28 @@ public class Guard implements Comparable<Guard> {
     }
 
     // Single guard
-    public static void runGuarded(final Guard g1, Runnable r) {
-        g1.runGuarded(r);
+    public static CompletableFuture<Void> runGuarded(final Guard g1, Runnable r) {
+        return g1.runGuarded(r);
     }
 
     // Multiple guards
-    public static void runGuarded(Runnable r, final Guard... guards) {
+    public static CompletableFuture<Void> runGuarded(Runnable r, final Guard... guards) {
         if (guards.length == 0) {
             r.run();
+            return CompletableFuture.completedFuture(null);
         } else if (guards.length == 1) {
-            guards[0].runGuarded(r);
+            return guards[0].runGuarded(r);
         } else {
-            runGuarded(GuardSet.of(guards), r);
+            return runGuarded(GuardSet.of(guards), r);
         }
     }
 
-    public static void runGuarded(GuardSet gs, Runnable r) {
+    public static CompletableFuture<Void> runGuarded(GuardSet gs, Runnable r) {
         if (gs.size() == 1) {
-            runGuarded(gs.get(0), r);
-            return;
+            return runGuarded(gs.get(0), r);
         }
 
+        var done = new CompletableFuture<Void>();
         assert gs.size() > 1;
 
         List<GuardTask> guardTasks = new ArrayList<>();
@@ -97,19 +105,21 @@ public class Guard implements Comparable<Guard> {
         int last = gs.size() - 1;
         assert guardTasks.size() == gs.size();
 
-        // set up the next to last task
+        // Set up the penultimate task
         guardTasks.get(last - 1).setRun(() -> {
-            // set up the last task
+            // Set up the ultimate task
             gs.get(last).runGuarded_(gs, () -> {
                 r.run();
-                // last to run unlocks everything
+                done.complete(null);
+                
+                // Last to run unlocks everything
                 for (int i = 0; i < last; i++) {
                     guardTasks.get(i).free(i < last - 1);
                 }
             });
         });
 
-        // prior tasks, each calls the next
+        // Prior tasks, each calls the next
         for (int i = 0; i < last - 1; i++) {
             final int next = i + 1;
             final var guardTask = guardTasks.get(i);
@@ -119,8 +129,11 @@ public class Guard implements Comparable<Guard> {
                 guardNext.dummyRunGuarded(guardTaskNext);
             });
         }
-        // kick the whole thing off
+        
+        // Kick the whole thing off
         gs.get(0).dummyRunGuarded(guardTasks.get(0));
+        
+        return done;
     }
 
     public static CondContext<CondTask0> newCondition(GuardSet guards) {
@@ -203,19 +216,19 @@ public class Guard implements Comparable<Guard> {
         return ctx.runCondition(c);
     }
 
-    public static <T1, T2> void runGuarded(
+    public static <T1, T2> CompletableFuture<Void> runGuarded(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardTask2<T1, T2> c) {
-        Guard.runGuarded(GuardSet.of(gv1, gv2), () -> c.run(gv1.var, gv2.var));
+        return Guard.runGuarded(GuardSet.of(gv1, gv2), () -> c.run(gv1.var, gv2.var));
     }
 
-    public static <T1, T2> void runGuardedEtAl(
+    public static <T1, T2> CompletableFuture<Void> runGuardedEtAl(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardTask2<T1, T2> c) {
         var held = GuardTask.GUARDS_HELD.get();
-        Guard.runGuarded(held.union(GuardSet.of(gv1, gv2)), () -> c.run(gv1.var, gv2.var));
+        return Guard.runGuarded(held.union(GuardSet.of(gv1, gv2)), () -> c.run(gv1.var, gv2.var));
     }
 
     public static <T1, T2, T3> CondContext<CondTask3<T1, T2, T3>> newCondition(
@@ -241,21 +254,21 @@ public class Guard implements Comparable<Guard> {
         return ctx.runCondition(c);
     }
 
-    public static <T1, T2, T3> void runGuarded(
+    public static <T1, T2, T3> CompletableFuture<Void> runGuarded(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
             final GuardTask3<T1, T2, T3> c) {
-        Guard.runGuarded(GuardSet.of(gv1, gv2, gv3), () -> c.run(gv1.var, gv2.var, gv3.var));
+        return Guard.runGuarded(GuardSet.of(gv1, gv2, gv3), () -> c.run(gv1.var, gv2.var, gv3.var));
     }
 
-    public static <T1, T2, T3> void runGuardedEtAl(
+    public static <T1, T2, T3> CompletableFuture<Void> runGuardedEtAl(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
             final GuardTask3<T1, T2, T3> c) {
         var held = GuardTask.GUARDS_HELD.get();
-        Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3)), () -> c.run(gv1.var, gv2.var, gv3.var));
+        return Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3)), () -> c.run(gv1.var, gv2.var, gv3.var));
     }
 
 
@@ -284,23 +297,23 @@ public class Guard implements Comparable<Guard> {
         return ctx.runCondition(c);
     }
 
-    public static <T1, T2, T3, T4> void runGuarded(
+    public static <T1, T2, T3, T4> CompletableFuture<Void> runGuarded(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
             final GuardVar<T4> gv4,
             final GuardTask4<T1, T2, T3, T4> c) {
-        Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var));
+        return Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var));
     }
 
-    public static <T1, T2, T3, T4> void runGuardedEtAl(
+    public static <T1, T2, T3, T4> CompletableFuture<Void> runGuardedEtAl(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
             final GuardVar<T4> gv4,
             final GuardTask4<T1, T2, T3, T4> c) {
         var held = GuardTask.GUARDS_HELD.get();
-        Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var));
+        return Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var));
     }
 
 
@@ -331,17 +344,17 @@ public class Guard implements Comparable<Guard> {
         return ctx.runCondition(c);
     }
 
-    public static <T1, T2, T3, T4, T5> void runGuarded(
+    public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runGuarded(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
             final GuardVar<T4> gv4,
             final GuardVar<T5> gv5,
             final GuardTask5<T1, T2, T3, T4, T5> c) {
-        Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var));
+        return Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var));
     }
 
-    public static <T1, T2, T3, T4, T5> void runGuardedEtAl(
+    public static <T1, T2, T3, T4, T5> CompletableFuture<Void> runGuardedEtAl(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -349,7 +362,7 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T5> gv5,
             final GuardTask5<T1, T2, T3, T4, T5> c) {
         var held = GuardTask.GUARDS_HELD.get();
-        Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var));
+        return Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var));
     }
 
 
@@ -382,7 +395,7 @@ public class Guard implements Comparable<Guard> {
         return ctx.runCondition(c);
     }
 
-    public static <T1, T2, T3, T4, T5, T6> void runGuarded(
+    public static <T1, T2, T3, T4, T5, T6> CompletableFuture<Void> runGuarded(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -390,10 +403,10 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T5> gv5,
             final GuardVar<T6> gv6,
             final GuardTask6<T1, T2, T3, T4, T5, T6> c) {
-        Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var));
+        return Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var));
     }
 
-    public static <T1, T2, T3, T4, T5, T6> void runGuardedEtAl(
+    public static <T1, T2, T3, T4, T5, T6> CompletableFuture<Void> runGuardedEtAl(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -402,7 +415,7 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T6> gv6,
             final GuardTask6<T1, T2, T3, T4, T5, T6> c) {
         var held = GuardTask.GUARDS_HELD.get();
-        Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var));
+        return Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var));
     }
 
 
@@ -437,7 +450,7 @@ public class Guard implements Comparable<Guard> {
         return ctx.runCondition(c);
     }
 
-    public static <T1, T2, T3, T4, T5, T6, T7> void runGuarded(
+    public static <T1, T2, T3, T4, T5, T6, T7> CompletableFuture<Void> runGuarded(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -446,10 +459,10 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T6> gv6,
             final GuardVar<T7> gv7,
             final GuardTask7<T1, T2, T3, T4, T5, T6, T7> c) {
-        Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var));
+        return Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var));
     }
 
-    public static <T1, T2, T3, T4, T5, T6, T7> void runGuardedEtAl(
+    public static <T1, T2, T3, T4, T5, T6, T7> CompletableFuture<Void> runGuardedEtAl(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -459,7 +472,7 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T7> gv7,
             final GuardTask7<T1, T2, T3, T4, T5, T6, T7> c) {
         var held = GuardTask.GUARDS_HELD.get();
-        Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var));
+        return Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var));
     }
 
 
@@ -496,7 +509,7 @@ public class Guard implements Comparable<Guard> {
         return ctx.runCondition(c);
     }
 
-    public static <T1, T2, T3, T4, T5, T6, T7, T8> void runGuarded(
+    public static <T1, T2, T3, T4, T5, T6, T7, T8> CompletableFuture<Void> runGuarded(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -506,10 +519,10 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T7> gv7,
             final GuardVar<T8> gv8,
             final GuardTask8<T1, T2, T3, T4, T5, T6, T7, T8> c) {
-        Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var));
+        return Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var));
     }
 
-    public static <T1, T2, T3, T4, T5, T6, T7, T8> void runGuardedEtAl(
+    public static <T1, T2, T3, T4, T5, T6, T7, T8> CompletableFuture<Void> runGuardedEtAl(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -520,7 +533,7 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T8> gv8,
             final GuardTask8<T1, T2, T3, T4, T5, T6, T7, T8> c) {
         var held = GuardTask.GUARDS_HELD.get();
-        Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var));
+        return Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var));
     }
 
 
@@ -559,7 +572,7 @@ public class Guard implements Comparable<Guard> {
         return ctx.runCondition(c);
     }
 
-    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9> void runGuarded(
+    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9> CompletableFuture<Void> runGuarded(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -570,10 +583,10 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T8> gv8,
             final GuardVar<T9> gv9,
             final GuardTask9<T1, T2, T3, T4, T5, T6, T7, T8, T9> c) {
-        Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var));
+        return Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var));
     }
 
-    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9> void runGuardedEtAl(
+    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9> CompletableFuture<Void> runGuardedEtAl(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -585,7 +598,7 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T9> gv9,
             final GuardTask9<T1, T2, T3, T4, T5, T6, T7, T8, T9> c) {
         var held = GuardTask.GUARDS_HELD.get();
-        Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var));
+        return Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var));
     }
 
 
@@ -626,7 +639,7 @@ public class Guard implements Comparable<Guard> {
         return ctx.runCondition(c);
     }
 
-    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> void runGuarded(
+    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> CompletableFuture<Void> runGuarded(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -638,10 +651,10 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T9> gv9,
             final GuardVar<T10> gv10,
             final GuardTask10<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> c) {
-        Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var));
+        return Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var));
     }
 
-    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> void runGuardedEtAl(
+    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> CompletableFuture<Void> runGuardedEtAl(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -654,7 +667,7 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T10> gv10,
             final GuardTask10<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> c) {
         var held = GuardTask.GUARDS_HELD.get();
-        Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var));
+        return Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var));
     }
 
 
@@ -697,7 +710,7 @@ public class Guard implements Comparable<Guard> {
         return ctx.runCondition(c);
     }
 
-    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> void runGuarded(
+    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> CompletableFuture<Void> runGuarded(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -710,10 +723,10 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T10> gv10,
             final GuardVar<T11> gv11,
             final GuardTask11<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> c) {
-        Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var));
+        return Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var));
     }
 
-    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> void runGuardedEtAl(
+    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> CompletableFuture<Void> runGuardedEtAl(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -727,7 +740,7 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T11> gv11,
             final GuardTask11<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> c) {
         var held = GuardTask.GUARDS_HELD.get();
-        Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var));
+        return Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var));
     }
 
 
@@ -772,7 +785,7 @@ public class Guard implements Comparable<Guard> {
         return ctx.runCondition(c);
     }
 
-    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> void runGuarded(
+    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> CompletableFuture<Void> runGuarded(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -786,10 +799,10 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T11> gv11,
             final GuardVar<T12> gv12,
             final GuardTask12<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> c) {
-        Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var));
+        return Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var));
     }
 
-    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> void runGuardedEtAl(
+    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> CompletableFuture<Void> runGuardedEtAl(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -804,7 +817,7 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T12> gv12,
             final GuardTask12<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> c) {
         var held = GuardTask.GUARDS_HELD.get();
-        Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var));
+        return Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var));
     }
 
 
@@ -851,7 +864,7 @@ public class Guard implements Comparable<Guard> {
         return ctx.runCondition(c);
     }
 
-    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> void runGuarded(
+    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> CompletableFuture<Void> runGuarded(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -866,10 +879,10 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T12> gv12,
             final GuardVar<T13> gv13,
             final GuardTask13<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> c) {
-        Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12, gv13), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var, gv13.var));
+        return Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12, gv13), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var, gv13.var));
     }
 
-    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> void runGuardedEtAl(
+    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> CompletableFuture<Void> runGuardedEtAl(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -885,7 +898,7 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T13> gv13,
             final GuardTask13<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> c) {
         var held = GuardTask.GUARDS_HELD.get();
-        Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12, gv13)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var, gv13.var));
+        return Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12, gv13)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var, gv13.var));
     }
 
 
@@ -934,7 +947,7 @@ public class Guard implements Comparable<Guard> {
         return ctx.runCondition(c);
     }
 
-    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> void runGuarded(
+    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> CompletableFuture<Void> runGuarded(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -950,10 +963,10 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T13> gv13,
             final GuardVar<T14> gv14,
             final GuardTask14<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> c) {
-        Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12, gv13, gv14), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var, gv13.var, gv14.var));
+        return Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12, gv13, gv14), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var, gv13.var, gv14.var));
     }
 
-    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> void runGuardedEtAl(
+    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> CompletableFuture<Void> runGuardedEtAl(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -970,7 +983,7 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T14> gv14,
             final GuardTask14<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> c) {
         var held = GuardTask.GUARDS_HELD.get();
-        Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12, gv13, gv14)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var, gv13.var, gv14.var));
+        return Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12, gv13, gv14)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var, gv13.var, gv14.var));
     }
 
 
@@ -1021,7 +1034,7 @@ public class Guard implements Comparable<Guard> {
         return ctx.runCondition(c);
     }
 
-    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> void runGuarded(
+    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> CompletableFuture<Void> runGuarded(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -1038,10 +1051,10 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T14> gv14,
             final GuardVar<T15> gv15,
             final GuardTask15<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> c) {
-        Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12, gv13, gv14, gv15), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var, gv13.var, gv14.var, gv15.var));
+        return Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12, gv13, gv14, gv15), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var, gv13.var, gv14.var, gv15.var));
     }
 
-    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> void runGuardedEtAl(
+    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> CompletableFuture<Void> runGuardedEtAl(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -1059,7 +1072,7 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T15> gv15,
             final GuardTask15<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> c) {
         var held = GuardTask.GUARDS_HELD.get();
-        Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12, gv13, gv14, gv15)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var, gv13.var, gv14.var, gv15.var));
+        return Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12, gv13, gv14, gv15)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var, gv13.var, gv14.var, gv15.var));
     }
 
 
@@ -1112,7 +1125,7 @@ public class Guard implements Comparable<Guard> {
         return ctx.runCondition(c);
     }
 
-    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> void runGuarded(
+    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> CompletableFuture<Void> runGuarded(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -1130,10 +1143,10 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T15> gv15,
             final GuardVar<T16> gv16,
             final GuardTask16<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> c) {
-        Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12, gv13, gv14, gv15, gv16), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var, gv13.var, gv14.var, gv15.var, gv16.var));
+        return Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12, gv13, gv14, gv15, gv16), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var, gv13.var, gv14.var, gv15.var, gv16.var));
     }
 
-    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> void runGuardedEtAl(
+    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> CompletableFuture<Void> runGuardedEtAl(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -1152,7 +1165,7 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T16> gv16,
             final GuardTask16<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> c) {
         var held = GuardTask.GUARDS_HELD.get();
-        Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12, gv13, gv14, gv15, gv16)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var, gv13.var, gv14.var, gv15.var, gv16.var));
+        return Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12, gv13, gv14, gv15, gv16)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var, gv13.var, gv14.var, gv15.var, gv16.var));
     }
 
 
@@ -1207,7 +1220,7 @@ public class Guard implements Comparable<Guard> {
         return ctx.runCondition(c);
     }
 
-    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17> void runGuarded(
+    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17> CompletableFuture<Void> runGuarded(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -1226,10 +1239,10 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T16> gv16,
             final GuardVar<T17> gv17,
             final GuardTask17<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17> c) {
-        Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12, gv13, gv14, gv15, gv16, gv17), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var, gv13.var, gv14.var, gv15.var, gv16.var, gv17.var));
+        return Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12, gv13, gv14, gv15, gv16, gv17), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var, gv13.var, gv14.var, gv15.var, gv16.var, gv17.var));
     }
 
-    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17> void runGuardedEtAl(
+    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17> CompletableFuture<Void> runGuardedEtAl(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -1249,7 +1262,7 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T17> gv17,
             final GuardTask17<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17> c) {
         var held = GuardTask.GUARDS_HELD.get();
-        Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12, gv13, gv14, gv15, gv16, gv17)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var, gv13.var, gv14.var, gv15.var, gv16.var, gv17.var));
+        return Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12, gv13, gv14, gv15, gv16, gv17)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var, gv13.var, gv14.var, gv15.var, gv16.var, gv17.var));
     }
 
 
@@ -1306,7 +1319,7 @@ public class Guard implements Comparable<Guard> {
         return ctx.runCondition(c);
     }
 
-    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18> void runGuarded(
+    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18> CompletableFuture<Void> runGuarded(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -1326,10 +1339,10 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T17> gv17,
             final GuardVar<T18> gv18,
             final GuardTask18<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18> c) {
-        Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12, gv13, gv14, gv15, gv16, gv17, gv18), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var, gv13.var, gv14.var, gv15.var, gv16.var, gv17.var, gv18.var));
+        return Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12, gv13, gv14, gv15, gv16, gv17, gv18), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var, gv13.var, gv14.var, gv15.var, gv16.var, gv17.var, gv18.var));
     }
 
-    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18> void runGuardedEtAl(
+    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18> CompletableFuture<Void> runGuardedEtAl(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -1350,7 +1363,7 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T18> gv18,
             final GuardTask18<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18> c) {
         var held = GuardTask.GUARDS_HELD.get();
-        Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12, gv13, gv14, gv15, gv16, gv17, gv18)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var, gv13.var, gv14.var, gv15.var, gv16.var, gv17.var, gv18.var));
+        return Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12, gv13, gv14, gv15, gv16, gv17, gv18)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var, gv13.var, gv14.var, gv15.var, gv16.var, gv17.var, gv18.var));
     }
 
 
@@ -1409,7 +1422,7 @@ public class Guard implements Comparable<Guard> {
         return ctx.runCondition(c);
     }
 
-    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19> void runGuarded(
+    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19> CompletableFuture<Void> runGuarded(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -1430,10 +1443,10 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T18> gv18,
             final GuardVar<T19> gv19,
             final GuardTask19<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19> c) {
-        Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12, gv13, gv14, gv15, gv16, gv17, gv18, gv19), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var, gv13.var, gv14.var, gv15.var, gv16.var, gv17.var, gv18.var, gv19.var));
+        return Guard.runGuarded(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12, gv13, gv14, gv15, gv16, gv17, gv18, gv19), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var, gv13.var, gv14.var, gv15.var, gv16.var, gv17.var, gv18.var, gv19.var));
     }
 
-    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19> void runGuardedEtAl(
+    public static <T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19> CompletableFuture<Void> runGuardedEtAl(
             final GuardVar<T1> gv1,
             final GuardVar<T2> gv2,
             final GuardVar<T3> gv3,
@@ -1455,7 +1468,7 @@ public class Guard implements Comparable<Guard> {
             final GuardVar<T19> gv19,
             final GuardTask19<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19> c) {
         var held = GuardTask.GUARDS_HELD.get();
-        Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12, gv13, gv14, gv15, gv16, gv17, gv18, gv19)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var, gv13.var, gv14.var, gv15.var, gv16.var, gv17.var, gv18.var, gv19.var));
+        return Guard.runGuarded(held.union(GuardSet.of(gv1, gv2, gv3, gv4, gv5, gv6, gv7, gv8, gv9, gv10, gv11, gv12, gv13, gv14, gv15, gv16, gv17, gv18, gv19)), () -> c.run(gv1.var, gv2.var, gv3.var, gv4.var, gv5.var, gv6.var, gv7.var, gv8.var, gv9.var, gv10.var, gv11.var, gv12.var, gv13.var, gv14.var, gv15.var, gv16.var, gv17.var, gv18.var, gv19.var));
     }
 
 // endregion
