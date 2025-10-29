@@ -106,7 +106,8 @@ for (int i = 0; i < nChunks; i++) {
             chunkTask.run(${viewList});
         } catch (Exception e) {
             done.completeExceptionally(e);
-            System.err.println("Error in chunk task: " + e.getMessage() + " in chunk " + partNum + " of " + nChunks);
+            System.err.println("Error in chunk task: " + e.getMessage() + " in chunk " + (partNum+1) + " of " + nChunks);
+            e.printStackTrace();
             System.exit(0xdeadbeef);
             return;
         }
@@ -153,7 +154,8 @@ for (int i = 0; i < ranges.numPartitions(); i++) {
             chunkTask.run(${viewList});
         } catch (Exception e) {
             done.completeExceptionally(e);
-            System.err.println("Error in chunk task: " + e.getMessage() + " in chunk " + partNum + " of " + ranges.numPartitions());
+            System.err.println("Error in chunk task: " + e.getMessage() + " in chunk " + (partNum+1) + " of " + ranges.numPartitions());
+            e.printStackTrace();
             System.exit(0xdeadbeef);
             return;
         }
