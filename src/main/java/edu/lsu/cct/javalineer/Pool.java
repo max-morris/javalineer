@@ -67,6 +67,7 @@ public class Pool {
                 pw.println("Pool.run(): Exception in thread " + Thread.currentThread().getName() + ":");
                 t.printStackTrace(pw);
                 reallyPrintln(sw);
+                System.exit(0xdeadbeef);
             }
         });
 
@@ -85,6 +86,7 @@ public class Pool {
                     pw.println("Pool.run(): Exception in thread " + Thread.currentThread().getName() + ":");
                     throwable.printStackTrace(pw);
                     reallyPrintln(sw);
+                    System.exit(0xdeadbeef);
                 } else {
                     done.complete(result);
                 }
