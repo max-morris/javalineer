@@ -1,6 +1,8 @@
 package edu.lsu.cct.javalineer;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.*;
@@ -43,8 +45,17 @@ public class Pool {
         thePool = newPool;
     }
 
+    private static PrintWriter getDebugPrintWriter() throws IOException {
+        // Dirty hack to make this work in JupyterHub notebooks
+        if (Files.exists(Paths.get("/jupyterhub.sqlite"))) {
+            return new PrintWriter("~/.horribleness");
+        } else {
+            return new PrintWriter("/dev/tty");
+        }
+    }
+
     private static void reallyPrintln(Object o) {
-        try (PrintWriter pw = new PrintWriter("/dev/tty")) {
+        try (PrintWriter pw = getDebugPrintWriter()) {
             pw.println(Objects.toString(o));
         } catch (IOException ignored) { }
     }
