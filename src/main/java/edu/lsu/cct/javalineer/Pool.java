@@ -48,7 +48,7 @@ public class Pool {
     private static PrintWriter getDebugPrintWriter() throws IOException {
         // Dirty hack to make this work in JupyterHub notebooks
         if (Files.exists(Paths.get("/jupyterhub.sqlite"))) {
-            return new PrintWriter("~/.horribleness");
+            return new PrintWriter(System.getenv("HOME") + "/.horribleness");
         } else {
             return new PrintWriter("/dev/tty");
         }
