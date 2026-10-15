@@ -91,11 +91,16 @@ public final class PartitionableList<E> {
 
             Runnable task = () -> {
                 final var view = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
-                chunkTask.apply(view).thenAccept(res -> {
+                Pool.callCapturing(() -> chunkTask.apply(view)).whenComplete((res, e) -> {
                     this.rangeAccountant.runGuarded((rangeAccountantVar) -> {
                         rangeAccountantVar.get().release(PartIntentKind.ReadOnly, lo, hi, nGhosts);
                         this.rangeAccountantCond.signalAll();
                     });
+
+                    if (e != null) {
+                        result.completeExceptionally(e);
+                        return;
+                    }
 
                     Guard.runGuarded(intermediateGuard, () -> {
                         intermediateList.add(res);
@@ -114,7 +119,13 @@ public final class PartitionableList<E> {
         tasksDone.getFut().thenRun(() -> {
             assert nChunks == intermediateList.size();
             final var view = new ReadOnlyPartListView<>(intermediateList, 0, nChunks, 0, 0, this);
-            chunkTask.apply(view).thenAccept(result::complete);
+            Pool.callCapturing(() -> chunkTask.apply(view)).whenComplete((res, e) -> {
+                if (e != null) {
+                    result.completeExceptionally(e);
+                } else {
+                    result.complete(res);
+                }
+            });
         });
 
         return result;

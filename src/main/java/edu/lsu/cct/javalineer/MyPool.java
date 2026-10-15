@@ -88,21 +88,24 @@ public class MyPool implements Executor {
         }
 
         public void run() {
-            try {
-                while (true) {
-                    Runnable gt = rmTaskWait();
+            while (true) {
+                Runnable gt = rmTaskWait();
+                try {
                     gt.run();
+                } catch (Throwable t) {
+                    Pool.handleUncaught(t);
                 }
-            } catch (/*Throwable*/ Exception ex) {
-                ex.printStackTrace();
-                System.exit(1);
             }
         }
 
         public boolean runOne() {
             Runnable run = rmTask();
             if (run != null) {
-                run.run();
+                try {
+                    run.run();
+                } catch (Throwable t) {
+                    Pool.handleUncaught(t);
+                }
                 return true;
             } else {
                 return false;

@@ -20,9 +20,8 @@ public class CondTask1<T> extends CondTask {
                if (done) {
                    fut.complete(null);
                }
-           } catch (Exception e) {
-               done = true;
-               fut.completeExceptionally(e);
+           } catch (Throwable e) {
+               fail(e);
            }
         }
     }

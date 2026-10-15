@@ -94,9 +94,8 @@ public class CondTask{i}<{tlist}> extends CondTask {{
                 if (done) {{
                     fut.complete(null);
                 }}
-            }} catch (Exception e) {{
-                done = true;
-                fut.completeExceptionally(e);
+            }} catch (Throwable e) {{
+                fail(e);
             }}
         }}
     }}
