@@ -1,4 +1,6 @@
 import java.security.MessageDigest
+import org.gradle.process.ExecOperations
+import javax.inject.Inject
 
 plugins {
     id 'java'
@@ -9,6 +11,12 @@ plugins {
 
 group = 'edu.lsu.cct.javalineer'
 
+// Gradle 9 removed Project.exec {} from within a task action, so inject ExecOperations instead.
+interface InjectedExecOps {
+    @Inject ExecOperations getExecOps()
+}
+def injectedExec = objects.newInstance(InjectedExecOps)
+
 repositories {
 
 }
@@ -17,7 +25,7 @@ sourceSets {
     main {
         java {
             // Include generated sources directory
-            srcDir "$buildDir/generated/sources/javalineer/main/java"
+            srcDir layout.buildDirectory.dir('generated/sources/javalineer/main/java')
             // Exclusions for originals are added later based on codegenEntries
         }
     }
@@ -30,6 +38,11 @@ sourceSets {
 
 java {
     withSourcesJar()
+}
+
+// Gradle 9 itself needs JDK 17+, but keep the library usable from Java 11.
+tasks.withType(JavaCompile).configureEach {
+    options.release = 11
 }
 
 // Generic code generation splice machinery
@@ -49,7 +62,7 @@ ext.codegenEntries = [
     ]
 ]
 
-def genSrcDir = file("$buildDir/generated/sources/javalineer/main/java")
+def genSrcDir = layout.buildDirectory.dir('generated/sources/javalineer/main/java').get().asFile
 
 // Exclude original target files so the spliced versions are the ones compiled
 sourceSets.main.java {
@@ -164,7 +177,7 @@ codegenEntries.each { cfg ->
             try {
                 def baos = new ByteArrayOutputStream()
                 File flourJar = getFlourJar.call()
-                exec {
+                injectedExec.execOps.exec {
                     commandLine 'java', '-jar', flourJar.absolutePath, generatorFile.absolutePath
                     standardOutput = baos
                 }
@@ -207,7 +220,7 @@ publishing {
     publications {
         maven(MavenPublication) {
             from components.java
-            version System.getenv("GITHUB_REFNAME") + "-" + System.getenv("GITHUB_HASH")
+            version = System.getenv("GITHUB_REFNAME") + "-" + System.getenv("GITHUB_HASH")
         }
     }
 
