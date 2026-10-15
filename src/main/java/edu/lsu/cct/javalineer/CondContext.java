@@ -52,7 +52,7 @@ public final class CondContext<T extends CondTask> {
 
     public CompletableFuture<Void> runCondition(final T task) {
         Guard.runGuarded(gSet, () -> {
-            task.run();
+            task.runCapturing();
             if (!task.done) {
                 enq(task);
             }
@@ -66,7 +66,7 @@ public final class CondContext<T extends CondTask> {
             Guard.runGuarded(gSet, () -> {
                 for (var task : tasks) {
                     if (!task.done) {
-                        task.run();
+                        task.runCapturing();
                         if (task.done) {
                             break;
                         }
@@ -81,7 +81,7 @@ public final class CondContext<T extends CondTask> {
             Guard.runGuarded(gSet, () -> {
                 for (var task : tasks) {
                     if (!task.done) {
-                        task.run();
+                        task.runCapturing();
                     }
                 }
             });

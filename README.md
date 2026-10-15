@@ -81,3 +81,31 @@ bothNonZero.signal(); // Re-run one pending task.
 bothNonZero.signalAll(); // Re-run all pending tasks.
 ```
 
+
+## Exceptions in Tasks
+Javalineer never prints, exits, or rethrows when a task throws. Instead, the exception is captured into the future
+associated with the task, and the rest of the system keeps running:
+
+- The futures returned by `runGuarded`, `runCondition`, `Pool.run`, `Loop.parFor`, `Loop.marchingFor`,
+  `ReadWriteGuard.runReadGuarded`/`runWriteGuarded`, and the partitioned list operations complete exceptionally with
+  the exception thrown by the task. A task which returns a `null` future where a future is required is treated as a
+  task which threw a `NullPointerException`.
+- The exception never escapes into unrelated code. In particular, a task given to an uncontended guard may run inline
+  on the thread which called `runGuarded`, but its exception still goes to its future, not to that caller.
+- Guards are always released, so tasks queued behind a failed task still run.
+- A conditional task which throws is finished; it is not retried.
+- `Loop.parFor` completes exceptionally as soon as any iteration fails, but the remaining iterations still run.
+  `Loop.marchingFor` stops at the first failed iteration.
+
+Because failures are only reported through futures, a future which nobody waits on will fail silently. To observe
+every failure as it happens (e.g., for logging), install a handler:
+
+```java
+Pool.setTaskFailureHandler(t -> System.err.println("Task failed: " + t));
+```
+
+The handler is informational only: the failure is still captured into the task's future. It runs synchronously on
+the thread which ran the failing task, possibly while that task's guards are still held, so it should be quick.
+
+Raw `Runnable`s given directly to the executor with `Pool.execute` have no future. If one throws, its exception is
+passed to the thread's uncaught exception handler, and the pool keeps running.

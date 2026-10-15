@@ -12,21 +12,30 @@ public class DebugPool implements Executor {
     public DebugPool() {
         seed = System.getProperty("JAVALINEER_DEBUG_POOL_SEED", null);
 
+        // The seed is printed so that a run with a random seed can be reproduced.
         if (seed == null) {
             seed = "" + RANDOM.nextInt();
             System.out.println("JAVALINEER_DEBUG_POOL_SEED was unset; using random seed: " + seed);
         } else {
             System.out.println("Using JAVALINEER_DEBUG_POOL_SEED: " + seed);
         }
+        System.out.flush();
 
         try {
             RANDOM.setSeed(Integer.parseInt(seed));
         } catch (NumberFormatException e) {
-            System.err.println("Invalid JAVALINEER_DEBUG_POOL_SEED: '" + seed + "'");
-            throw new RuntimeException(e);
-        } finally {
-            System.out.flush();
+            throw new RuntimeException("Invalid JAVALINEER_DEBUG_POOL_SEED: '" + seed + "'", e);
         }
+    }
+
+    /**
+     * Retrieves the seed which determines the order in which tasks run. If JAVALINEER_DEBUG_POOL_SEED was unset, this
+     * is the randomly chosen seed; set JAVALINEER_DEBUG_POOL_SEED to it to reproduce a run.
+     *
+     * @return The seed.
+     */
+    public String getSeed() {
+        return seed;
     }
 
     public String toString() {
@@ -53,9 +62,8 @@ public class DebugPool implements Executor {
             Runnable task = tasks.remove(nextTask);
             try {
                 task.run();
-            } catch (Exception e) {
-                e.printStackTrace();
-                System.exit(1);
+            } catch (Throwable t) {
+                Pool.handleUncaught(t);
             }
         }
         running = false;

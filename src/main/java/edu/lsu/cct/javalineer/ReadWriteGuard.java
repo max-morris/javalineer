@@ -41,7 +41,7 @@ public class ReadWriteGuard {
         return writeWaiting * balance > readWaiting;
     }
 
-    boolean runRead(final Runnable r,boolean incrWaiting) {
+    boolean runRead(final Runnable r, boolean incrWaiting, CompletableFuture<Void> done) {
         if (incrWaiting) {
             readWaiting++;
         }
@@ -50,62 +50,80 @@ public class ReadWriteGuard {
         } else {
             readWaiting--;
             readCount++;
-            CompletableFuture<CondTask0> future = new CompletableFuture<>();
-            Pool.run(() -> {
-                runme(r);
-            }).thenRun(() -> {
+            Pool.run(r).whenComplete((v, t) -> {
+                // Release the read slot whether or not r threw
                 Guard.runGuarded(g, () -> {
                     if (--readCount == 0) {
                         cond.signalAll();
                     }
                 });
+                if (t != null) {
+                    done.completeExceptionally(t);
+                } else {
+                    done.complete(null);
+                }
             });
             return true;
         }
     }
 
-    boolean runWrite(final Runnable r, boolean incrWaiting) {
+    boolean runWrite(final Runnable r, boolean incrWaiting, CompletableFuture<Void> done) {
         if (incrWaiting) {
             writeWaiting++;
         }
         if (readCount > 0 || !writersTurn()) {
             return false;
         } else {
-            runme(r);
+            // Never throws, so the bookkeeping below always happens
+            Pool.runCapturing(r, done);
             --writeWaiting;
             cond.signalAll();
             return true;
         }
     }
 
-    void runme(Runnable r) {
-        try {
-            r.run();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void runReadGuarded(final Runnable r) {
+    /**
+     * Runs r with read access. Multiple readers may run concurrently.
+     *
+     * @return A future which completes when r returns, or completes exceptionally if r throws.
+     */
+    public CompletableFuture<Void> runReadGuarded(final Runnable r) {
+        var done = new CompletableFuture<Void>();
         Guard.runCondition(cond, new CondCheck0() {
             public boolean incrWaiting = true;
             public boolean check() {
                 boolean iw = incrWaiting;
                 incrWaiting = false;
-                return runRead(r, iw);
+                return runRead(r, iw, done);
+            }
+        }).whenComplete((v, t) -> {
+            if (t != null) {
+                done.completeExceptionally(t);
             }
         });
+        return done;
     }
 
-    public void runWriteGuarded(final Runnable r) {
+    /**
+     * Runs r with exclusive write access.
+     *
+     * @return A future which completes when r returns, or completes exceptionally if r throws.
+     */
+    public CompletableFuture<Void> runWriteGuarded(final Runnable r) {
+        var done = new CompletableFuture<Void>();
         Guard.runCondition(cond, new CondCheck0() {
             boolean incrWaiting = true;
             public boolean check() {
                 boolean b = incrWaiting;
                 incrWaiting = false;
-                return runWrite(r, b);
+                return runWrite(r, b, done);
+            }
+        }).whenComplete((v, t) -> {
+            if (t != null) {
+                done.completeExceptionally(t);
             }
         });
+        return done;
     }
 
 }

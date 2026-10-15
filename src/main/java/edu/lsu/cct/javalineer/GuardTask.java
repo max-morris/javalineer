@@ -50,12 +50,12 @@ public class GuardTask {
         }
         try {
             r.run();
-        } catch (RuntimeException | Error ex) {
-            ex.printStackTrace();
-            throw ex;
-        } catch(Exception ex) {
-            ex.printStackTrace();
-            throw new RuntimeException(ex);
+        } catch (Throwable t) {
+            // An exception must never escape from here: it would skip free_(), leaving the guard locked, or
+            // break the hand-off loop in free_(), stranding every task queued behind this one. It would also
+            // propagate into whatever unrelated code happens to be running this task. Tasks submitted through
+            // Guard capture their own exceptions into their futures, so this is only a safety net.
+            Pool.reportTaskFailure(t);
         }
     }
 

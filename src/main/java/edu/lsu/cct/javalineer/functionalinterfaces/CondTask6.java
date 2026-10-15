@@ -25,9 +25,8 @@ public class CondTask6<T1, T2, T3, T4, T5, T6> extends CondTask {
                 if (done) {
                     fut.complete(null);
                 }
-            } catch (Exception e) {
-                done = true;
-                fut.completeExceptionally(e);
+            } catch (Throwable e) {
+                fail(e);
             }
         }
     }

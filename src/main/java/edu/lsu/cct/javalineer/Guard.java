@@ -8,6 +8,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * A guard: mutual exclusion with an implicit task queue.
+ * <p>
+ * Exceptions: every task given to {@code runGuarded} or {@code runCondition} runs through {@link Pool#runCapturing} or
+ * {@link CondTask#runCapturing}, so a task which throws completes its future exceptionally instead of propagating the
+ * exception to whoever happened to run it (which, for an uncontended guard, is the caller of {@code runGuarded}). The
+ * guards are released whether or not the task throws, and tasks queued behind it still run. The failure is reported
+ * to the handler set by {@link Pool#setTaskFailureHandler}, if any. A conditional task which throws is finished: it is
+ * not retried.
+ */
 @SuppressWarnings("unused")
 public class Guard implements Comparable<Guard> {
     final static AtomicInteger nextId = new AtomicInteger(0);
@@ -39,10 +49,7 @@ public class Guard implements Comparable<Guard> {
     public CompletableFuture<Void> runGuarded(Runnable r) {
         var done = new CompletableFuture<Void>();
         
-        runGuarded_(GuardSet.of(this), () -> {
-            r.run();
-            done.complete(null);
-        });
+        runGuarded_(GuardSet.of(this), () -> Pool.runCapturing(r, done));
         
         return done;
     }
@@ -80,8 +87,9 @@ public class Guard implements Comparable<Guard> {
     // Multiple guards
     public static CompletableFuture<Void> runGuarded(Runnable r, final Guard... guards) {
         if (guards.length == 0) {
-            r.run();
-            return CompletableFuture.completedFuture(null);
+            var done = new CompletableFuture<Void>();
+            Pool.runCapturing(r, done);
+            return done;
         } else if (guards.length == 1) {
             return guards[0].runGuarded(r);
         } else {
@@ -90,7 +98,11 @@ public class Guard implements Comparable<Guard> {
     }
 
     public static CompletableFuture<Void> runGuarded(GuardSet gs, Runnable r) {
-        if (gs.size() == 1) {
+        if (gs.size() == 0) {
+            var done = new CompletableFuture<Void>();
+            Pool.runCapturing(r, done);
+            return done;
+        } else if (gs.size() == 1) {
             return runGuarded(gs.get(0), r);
         }
 
@@ -109,8 +121,8 @@ public class Guard implements Comparable<Guard> {
         guardTasks.get(last - 1).setRun(() -> {
             // Set up the ultimate task
             gs.get(last).runGuarded_(gs, () -> {
-                r.run();
-                done.complete(null);
+                // Never throws, so the guards below are always freed
+                Pool.runCapturing(r, done);
                 
                 // Last to run unlocks everything
                 for (int i = 0; i < last; i++) {

@@ -1,14 +1,9 @@
 package edu.lsu.cct.javalineer;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.*;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
-import java.io.StringWriter;
-import java.io.PrintWriter;
 
 public class Pool {
     private static Executor thePool = initializePool();
@@ -45,59 +40,125 @@ public class Pool {
         thePool = newPool;
     }
 
-    private static PrintWriter getDebugPrintWriter() throws IOException {
-        // Dirty hack to make this work in JupyterHub notebooks
-        if (Files.exists(Paths.get("/jupyterhub.sqlite"))) {
-            return new PrintWriter(System.getenv("HOME") + "/.horribleness");
-        } else {
-            return new PrintWriter("/dev/tty");
+    private static volatile Consumer<? super Throwable> taskFailureHandler = null;
+
+    /**
+     * Sets a handler which is notified whenever a task run by Javalineer throws. This includes tasks given to
+     * {@code runGuarded}, {@code runCondition}, {@code Pool.run}, {@code Loop}, {@link ReadWriteGuard}, and the
+     * partitioned list operations. The handler is purely informational: the failure is still captured into the future
+     * associated with the task (if there is one), and the handler is not needed for correctness. By default, no
+     * handler is installed and failures are reported only through those futures. The handler is called only for
+     * exceptions thrown by a task (or a task returning null where a future is required), not when a future returned
+     * by a task completes exceptionally.
+     * <p>
+     * The handler is called synchronously on the thread that ran the failing task, before the task's future is
+     * completed exceptionally. When the task was guarded, its guards may still be held while the handler runs, so the
+     * handler should be quick and must not wait on work which needs those guards. Any exception thrown by the handler
+     * itself is caught and ignored.
+     *
+     * @param handler The handler, or null to remove the current handler.
+     */
+    public static void setTaskFailureHandler(Consumer<? super Throwable> handler) {
+        taskFailureHandler = handler;
+    }
+
+    /**
+     * Retrieves the handler set by {@link #setTaskFailureHandler(Consumer)}.
+     *
+     * @return The current handler, or null if none is installed.
+     */
+    public static Consumer<? super Throwable> getTaskFailureHandler() {
+        return taskFailureHandler;
+    }
+
+    /**
+     * Notifies the task failure handler, if one is installed, that a task threw. Never throws.
+     */
+    static void reportTaskFailure(Throwable t) {
+        var handler = taskFailureHandler;
+        if (handler != null) {
+            try {
+                handler.accept(t);
+            } catch (Throwable ignored) { }
         }
     }
 
-    private static void reallyPrintln(Object o) {
-        try (PrintWriter pw = getDebugPrintWriter()) {
-            pw.println(Objects.toString(o));
-        } catch (IOException ignored) { }
+    /**
+     * Hands an exception thrown by a raw task (one given directly to an Executor, rather than through Javalineer's
+     * future-returning APIs) to the current thread's uncaught exception handler, as a thread pool would. Used by the
+     * pools which run tasks in loops that must survive such exceptions. Never throws.
+     */
+    static void handleUncaught(Throwable t) {
+        try {
+            var thread = Thread.currentThread();
+            thread.getUncaughtExceptionHandler().uncaughtException(thread, t);
+        } catch (Throwable ignored) { }
+    }
+
+    /**
+     * Runs r, completing done normally if r returns and exceptionally if r throws. Never throws.
+     */
+    static void runCapturing(Runnable r, CompletableFuture<Void> done) {
+        try {
+            r.run();
+        } catch (Throwable t) {
+            reportTaskFailure(t);
+            done.completeExceptionally(t);
+            return;
+        }
+        done.complete(null);
+    }
+
+    /**
+     * Calls task, returning the future it produces. If task throws or returns null, a failed future is returned
+     * instead. Never throws.
+     */
+    static <T> CompletableFuture<T> callCapturing(Supplier<CompletableFuture<T>> task) {
+        CompletableFuture<T> fut;
+        try {
+            fut = task.get();
+            if (fut == null) {
+                throw new NullPointerException("Task returned a null future");
+            }
+        } catch (Throwable t) {
+            reportTaskFailure(t);
+            return CompletableFuture.failedFuture(t);
+        }
+        return fut;
     }
 
     public static void execute(Runnable task) {
         thePool.execute(task);
     }
 
+    /**
+     * Runs a task on the pool.
+     *
+     * @param task The task.
+     * @return A future which completes when the task returns, or completes exceptionally if the task throws.
+     */
     public static CompletableFuture<Void> run(Runnable task) {
         var done = new CompletableFuture<Void>();
 
-        thePool.execute(() -> {
-            try {
-                task.run();
-                done.complete(null);
-            } catch (Throwable t) {
-                done.completeExceptionally(t);
-                var sw = new StringWriter();
-                var pw = new PrintWriter(sw);
-                pw.println("Pool.run(): Exception in thread " + Thread.currentThread().getName() + ":");
-                t.printStackTrace(pw);
-                reallyPrintln(sw);
-                System.exit(0xdeadbeef);
-            }
-        });
+        thePool.execute(() -> runCapturing(task, done));
 
         return done;
     }
 
+    /**
+     * Runs a task which produces a future on the pool.
+     *
+     * @param task The task.
+     * @return A future which completes with the result of the future produced by the task. It completes
+     *         exceptionally if the task throws, returns null, or produces a future which completes exceptionally.
+     */
     public static <T> CompletableFuture<T> run(Supplier<CompletableFuture<T>> task) {
         var done = new CompletableFuture<T>();
 
         thePool.execute(() -> {
-            task.get().whenComplete((result, throwable) -> {
+            callCapturing(task).whenComplete((result, throwable) -> {
                 if (throwable != null) {
                     done.completeExceptionally(throwable);
-                    var sw = new StringWriter();
-                    var pw = new PrintWriter(sw);
-                    pw.println("Pool.run(): Exception in thread " + Thread.currentThread().getName() + ":");
-                    throwable.printStackTrace(pw);
-                    reallyPrintln(sw);
-                    System.exit(0xdeadbeef);
                 } else {
                     done.complete(result);
                 }
