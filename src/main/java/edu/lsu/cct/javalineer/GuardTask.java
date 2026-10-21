@@ -1,5 +1,6 @@
 package edu.lsu.cct.javalineer;
 
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -72,7 +73,14 @@ public class GuardTask {
     void free(boolean forcePool) {
         assert isDummyTask : "Calling GuardTask.free() on a dummy task.";
         if (forcePool) {
-            Pool.run(this::free_);
+            try {
+                Pool.run(this::free_);
+            } catch (RejectedExecutionException e) {
+                // The pool was shut down or swapped. Freeing inline is always correct; it only costs stack
+                // depth (the whole point of the pool hop), never safety. Skipping it would leave this guard
+                // held forever and abort the release of the remaining guards.
+                free_();
+            }
         } else {
             free_();
         }

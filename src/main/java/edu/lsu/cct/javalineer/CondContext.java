@@ -108,7 +108,11 @@ public final class CondContext<T extends CondTask> {
             }
 
             tasksVar.set(taskList);
-            tasksFut.complete(taskList);
+            // taskList is now the live waiter list: enq appends to it under the tasks guard. The future's
+            // consumers (signal, signalAll) iterate under gSet, a different guard, so they must never see
+            // taskList itself, or a late enq could race the iteration (ConcurrentModificationException or a
+            // skipped waiter, i.e. a lost wakeup). Hand out an immutable copy instead.
+            tasksFut.complete(List.copyOf(taskList));
         });
 
         return tasksFut;
