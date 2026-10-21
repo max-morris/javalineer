@@ -4,6 +4,7 @@ import edu.lsu.cct.javalineer.functionalinterfaces.CondCheck0;
 import edu.lsu.cct.javalineer.functionalinterfaces.CondTask0;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.RejectedExecutionException;
 
 /**
  * This is a fairly simple guard that supports reading and writing.
@@ -50,7 +51,20 @@ public class ReadWriteGuard {
         } else {
             readWaiting--;
             readCount++;
-            Pool.run(r).whenComplete((v, t) -> {
+            CompletableFuture<Void> ran;
+            try {
+                ran = Pool.run(r);
+            } catch (RejectedExecutionException e) {
+                // The pool was shut down or swapped. readCount was already incremented, and the completion
+                // callback below is what decrements it, so the invariant (readCount == readers that will still
+                // run and release) requires that this reader still runs and still releases. Undoing the
+                // increment instead would drop the read and need its own signalAll bookkeeping. Running r inline
+                // is always correct: it only holds up this check (as a writer already does) and never safety.
+                // runCapturing never throws, so the release below always happens.
+                ran = new CompletableFuture<>();
+                Pool.runCapturing(r, ran);
+            }
+            ran.whenComplete((v, t) -> {
                 // Release the read slot whether or not r threw
                 Guard.runGuarded(g, () -> {
                     if (--readCount == 0) {
