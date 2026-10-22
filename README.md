@@ -109,3 +109,31 @@ the thread which ran the failing task, possibly while that task's guards are sti
 
 Raw `Runnable`s given directly to the executor with `Pool.execute` have no future. If one throws, its exception is
 passed to the thread's uncaught exception handler, and the pool keeps running.
+
+## Waiting at the End of a Program
+A program which waits for its final future with `join()` hangs forever if that future can never complete: a
+completion cycle (a future completed only by a continuation which waits for it, directly or through other futures),
+a latch signaled fewer times than its count, or a condition which is never signaled. Every task has finished, so the
+pool is idle, but nothing reports why. Wait with `Pool.join` instead:
+
+```java
+public static void main(String[] args) {
+    Pool.join(run(args)); // like run(args).join(), but never hangs silently
+}
+```
+
+`Pool.join(fut)` returns fut's value, or throws the same `CompletionException` as `fut.join()`. If the pool goes idle
+while fut is still incomplete, it writes a report of the pending state to stderr and throws `DeadlockException`, so
+the program ends with a failure instead of hanging. This relies on every future being completed by Javalineer tasks
+(or by the waiting thread before it waits), not by some other thread; called from a task on the pool, it is the same
+as `join()`.
+
+The report names the awaited future. For more detail, set `-DJAVALINEER_TRACK_PENDING=true` (or call
+`Pool.setTrackPending(true)` before the work starts): condition tasks (including latches) and any future registered
+with `Pool.trackPending(fut, kind, owner)` are then listed while incomplete, with the stack which registered them.
+Tracking is slow and meant for debugging. `-DJAVALINEER_DEADLOCK_CHECK=false` turns the check off, making
+`Pool.join(fut)` the same as `fut.join()`.
+
+The pool returned by `Pool.getPool()` wraps the executor given to `Pool.setPool` (or chosen by `JAVALINEER_POOL`) to
+count the tasks queued or running; give tasks to `Pool.getPool()`, not to the underlying executor, so they are
+counted.

@@ -57,6 +57,8 @@ public final class CondContext<T extends CondTask> {
                 enq(task);
             }
         });
+        // For a deadlock report (Pool.join): a condition task whose predicate never holds waits forever.
+        Pool.trackPending(task.fut, "condition task", this);
 
         return task.fut;
     }
