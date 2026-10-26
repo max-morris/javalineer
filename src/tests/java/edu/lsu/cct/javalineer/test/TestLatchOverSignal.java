@@ -10,7 +10,8 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Signaling a CountdownLatch more times than its count is reported to the task failure handler, once per extra signal;
- * signals within the count, from any number of threads, are not.
+ * signals within the count, from any number of threads, are not. A negative count is rejected, and an empty parFor
+ * range (which once made one) completes at once.
  */
 public class TestLatchOverSignal {
     static void check(boolean b, String what) {
@@ -49,6 +50,17 @@ public class TestLatchOverSignal {
         none.getFut().get(30, TimeUnit.SECONDS);
         none.signal();
         check(reports.size() == 1, "a signal of a latch counting 0 is reported");
+
+        // A negative count is rejected.
+        try {
+            new CountdownLatch(-1);
+            check(false, "a negative count is rejected");
+        } catch (IllegalArgumentException expected) {
+        }
+
+        // An empty parFor range runs nothing and completes.
+        edu.lsu.cct.javalineer.Loop.parFor(5, 0, i -> java.util.concurrent.CompletableFuture.completedFuture(null))
+                                   .get(30, TimeUnit.SECONDS);
 
         // Without a handler, an extra signal is ignored, as before.
         Pool.setTaskFailureHandler(null);

@@ -9,11 +9,19 @@ public class CountdownLatch extends Latch<Integer> {
 
     public CountdownLatch(int n) {
         // n + 1 because runCondition will immediately decrement by 1
-        super(n + 1, counter -> {
+        super(checkCount(n) + 1, counter -> {
             counter.set(counter.get() - 1);
             return counter.get() == 0;
         });
         remaining = new AtomicInteger(n);
+    }
+
+    // A negative count would never reach zero, so the latch's future could never complete.
+    private static int checkCount(int n) {
+        if (n < 0) {
+            throw new IllegalArgumentException("A CountdownLatch's count can't be negative: " + n);
+        }
+        return n;
     }
 
     /**

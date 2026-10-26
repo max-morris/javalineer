@@ -14,7 +14,8 @@ public class Loop {
      */
     public static CompletableFuture<Void> parFor(int i0, int iN, Function<Integer, CompletableFuture<Void>> body) {
         var result = new CompletableFuture<Void>();
-        var done = new CountdownLatch(iN - i0);
+        // An empty range (iN <= i0) runs no iterations, as marchingFor's does.
+        var done = new CountdownLatch(Math.max(0, iN - i0));
 
         done.getFut().whenComplete((v, t) -> {
             if (t != null) {
