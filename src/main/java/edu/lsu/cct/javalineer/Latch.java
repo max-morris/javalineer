@@ -15,7 +15,15 @@ public class Latch<T> {
     }
 
     public final void signal() {
+        beforeSignal();
         cond.signal();
+    }
+
+    /**
+     * Called on the signaling thread before each signal is delivered, e.g. to check that the latch isn't signaled
+     * more often than it expects.
+     */
+    protected void beforeSignal() {
     }
 
     public final CompletableFuture<Void> getFut() {

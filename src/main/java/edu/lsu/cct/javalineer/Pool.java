@@ -59,7 +59,9 @@ public class Pool {
      * associated with the task (if there is one), and the handler is not needed for correctness. By default, no
      * handler is installed and failures are reported only through those futures. The handler is called only for
      * exceptions thrown by a task (or a task returning null where a future is required), not when a future returned
-     * by a task completes exceptionally.
+     * by a task completes exceptionally. It is also told of misuse which no future would show: a
+     * {@link CountdownLatch} signaled more times than its count (an {@link IllegalStateException}, on the signaling
+     * thread).
      * <p>
      * The handler is called synchronously on the thread that ran the failing task, before the task's future is
      * completed exceptionally. When the task was guarded, its guards may still be held while the handler runs, so the
