@@ -66,23 +66,50 @@ public class GuardTask {
             free_();
     }
 
-    void free() {
-        free(false);
+    /**
+     * Releases this dummy task's guard, part of the release of a multi-guard acquisition (see
+     * {@link Guard#runGuarded(GuardSet, Runnable)}). Unlike {@link #free_()}, it never runs the successor on this
+     * thread while the pool accepts tasks: a successor found here is handed to the pool. The release of an
+     * acquisition must not wait for the work queued behind one of its guards, which may never end (a queue whose
+     * every task enqueues another on the same guard), while its later guards are still held.
+     */
+    void release() {
+        assert isDummyTask : "Calling GuardTask.release() on a user task.";
+        var ok = guard.locked.compareAndSet(true, false);
+        assert ok;
+        if (next.compareAndSet(null, DONE)) {
+            return;
+        }
+        // The CAS failed, so a successor linked itself behind this task and this thread alone must run it.
+        final GuardTask gt = next.get();
+        try {
+            Pool.run(gt::handOff_);
+        } catch (RejectedExecutionException e) {
+            // The pool was shut down or swapped. Running the successor inline is always safe; it only delays the
+            // release of this acquisition's remaining guards until the successor's chain of handoffs ends.
+            // Skipping it would strand every task queued on this guard.
+            gt.handOff_();
+        }
     }
 
-    void free(boolean forcePool) {
-        assert isDummyTask : "Calling GuardTask.free() on a dummy task.";
-        if (forcePool) {
-            try {
-                Pool.run(this::free_);
-            } catch (RejectedExecutionException e) {
-                // The pool was shut down or swapped. Freeing inline is always correct; it only costs stack
-                // depth (the whole point of the pool hop), never safety. Skipping it would leave this guard
-                // held forever and abort the release of the remaining guards.
-                free_();
+    /**
+     * Runs this task, which has been handed its guard by the release of its predecessor, and continues the
+     * {@link #free_()} handoff loop from it.
+     */
+    private void handOff_() {
+        GuardTask gt = this;
+        while (true) {
+            gt.run_();
+            if (gt.isDummyTask()) {
+                return;
             }
-        } else {
-            free_();
+            var ok = gt.guard.locked.compareAndSet(true, false);
+            assert ok;
+            var n = gt.next;
+            if (n.compareAndSet(null, DONE)) {
+                return;
+            }
+            gt = n.get();
         }
     }
 

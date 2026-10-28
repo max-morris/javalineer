@@ -124,9 +124,13 @@ public class Guard implements Comparable<Guard> {
                 // Never throws, so the guards below are always freed
                 Pool.runCapturing(r, done);
                 
-                // Last to run unlocks everything
+                // Last to run unlocks everything. Every guard but the last is released here before any task
+                // queued behind it runs, and a task found queued behind one is handed to the pool; the last guard
+                // is released by this task's own free_ when this returns. So no successor runs on this thread
+                // until all of the guards are released (claims review F5 (b)): an inline handoff here could run
+                // a self-perpetuating queue on one guard forever while the others stay held.
                 for (int i = 0; i < last; i++) {
-                    guardTasks.get(i).free(i < last - 1);
+                    guardTasks.get(i).release();
                 }
             });
         });
