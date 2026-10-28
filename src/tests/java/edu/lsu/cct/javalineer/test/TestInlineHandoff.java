@@ -18,6 +18,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * guards must still be released. Before the fix, the release ran the queue inline on the body's thread, ahead of the
  * release of the last guard, which then stayed held for as long as the queue went on.
  * <p>
+ * The last case checks the same for the task which called runGuarded, when the acquisition ran inline inside it.
+ * <p>
  * Each case waits at most TIMEOUT_SECONDS for the guards; on a timeout it stops the queue, so the program never
  * hangs, and exits with status 1.
  */
@@ -101,6 +103,59 @@ public class TestInlineHandoff {
         return ok;
     }
 
+    /**
+     * The caller of an acquisition which runs inline must not be held by the queue behind it either. A task on c
+     * (which holds c) calls runGuarded(body, a, b) while a and b are free, so the acquisition and its body run inline
+     * inside the task; the body links the first task of a chain on a behind the acquisition. When the body finishes,
+     * a and b are released, and the chain's next task is owed a run by this thread. Running it here (on master, or a
+     * trampoline started inline) runs the chain on the task's thread for as long as it goes on, so the task never
+     * returns and c stays held.
+     */
+    static boolean checkNested(String name) throws Exception {
+        var gs = guards(3);
+        Guard a = gs[0], b = gs[1], c = gs[2];
+        var chain = new Chain(a, () -> { });
+        var bodyRan = new CountDownLatch(1);
+        var linked = new CountDownLatch(1);
+        Pool.run(() -> c.runGuarded(() -> Guard.runGuarded(() -> {
+            // Inside the acquisition of a and b, inside the task on c: the chain's first task queues behind it on a.
+            Pool.run(() -> {
+                a.runGuarded(chain::link);
+                linked.countDown();
+            });
+            try {
+                if (!linked.await(TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                    throw new AssertionError("FAILED " + name + ": the chain was not linked");
+                }
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            bodyRan.countDown();
+        }, a, b)));
+        boolean ok = true;
+        try {
+            if (!bodyRan.await(TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                throw new AssertionError("FAILED " + name + ": the acquisition's body never ran");
+            }
+            for (int i = 1; i < gs.length; i++) {
+                var probe = gs[i].runGuarded(() -> { });
+                try {
+                    probe.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+                } catch (TimeoutException e) {
+                    System.out.println("FAILED " + name + ": guard " + i + " still held " + TIMEOUT_SECONDS
+                            + " s after the body finished (chain at " + chain.links.get() + " tasks)");
+                    ok = false;
+                }
+            }
+        } finally {
+            chain.stop();
+        }
+        if (ok) {
+            System.out.println("ok " + name);
+        }
+        return ok;
+    }
+
     static Guard[] guards(int n) {
         var gs = new Guard[n];
         for (int i = 0; i < n; i++) {
@@ -120,6 +175,8 @@ public class TestInlineHandoff {
             ok &= check("three guards, chain on the second", guards(3), 1);
             ok &= check("three guards, chain on the first", guards(3), 0);
             ok &= check("four guards, chain on the third", guards(4), 2);
+            ok &= check("two guards, chain on the second", guards(2), 1);
+            ok &= checkNested("an inline acquisition of two guards inside a task on a third, chain on the first");
         }
 
         if (!ok) {

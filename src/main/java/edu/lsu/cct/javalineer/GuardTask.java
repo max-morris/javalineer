@@ -1,5 +1,6 @@
 package edu.lsu.cct.javalineer;
 
+import java.util.List;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -68,27 +69,129 @@ public class GuardTask {
 
     /**
      * Releases this dummy task's guard, part of the release of a multi-guard acquisition (see
-     * {@link Guard#runGuarded(GuardSet, Runnable)}). Unlike {@link #free_()}, it never runs the successor on this
-     * thread while the pool accepts tasks: a successor found here is handed to the pool. The release of an
-     * acquisition must not wait for the work queued behind one of its guards, which may never end (a queue whose
-     * every task enqueues another on the same guard), while its later guards are still held.
+     * {@link #releaseAll(List)}): clears the guard and CASes next from null to DONE, as {@link #free_()} does,
+     * but does not run the successor.
+     *
+     * @return The successor linked behind this task, which this thread alone must now run (or hand to the pool),
+     *         or null if there is none.
      */
-    void release() {
+    private GuardTask release() {
         assert isDummyTask : "Calling GuardTask.release() on a user task.";
         var ok = guard.locked.compareAndSet(true, false);
         assert ok;
         if (next.compareAndSet(null, DONE)) {
-            return;
+            return null;
         }
         // The CAS failed, so a successor linked itself behind this task and this thread alone must run it.
-        final GuardTask gt = next.get();
-        try {
-            Pool.run(gt::handOff_);
-        } catch (RejectedExecutionException e) {
-            // The pool was shut down or swapped. Running the successor inline is always safe; it only delays the
-            // release of this acquisition's remaining guards until the successor's chain of handoffs ends.
-            // Skipping it would strand every task queued on this guard.
-            gt.handOff_();
+        return next.get();
+    }
+
+    /**
+     * Releases every guard of a finished multi-guard acquisition, whose tasks (all dummies, one per guard, in guard
+     * order) are given. No successor runs on this thread until every guard is released: the release of an
+     * acquisition must not wait for the work queued behind one of its guards, which may never end (a queue whose
+     * every task enqueues another on the same guard), while its later guards are still held (claims review F5 (b)).
+     * The first successor found is then offered to this thread's {@link Trampoline}; any other is handed to the
+     * pool.
+     */
+    static void releaseAll(List<GuardTask> acquisition) {
+        GuardTask kept = null;
+        for (int i = 0; i < acquisition.size(); i++) {
+            GuardTask succ = acquisition.get(i).release();
+            if (succ != null) {
+                if (kept == null) {
+                    kept = succ;
+                } else {
+                    Trampoline.submit(succ);
+                }
+            }
+        }
+        if (kept != null) {
+            Trampoline.offer(kept, acquisition);
+        }
+    }
+
+    /**
+     * A per-thread loop which runs, one at a time and without growing the stack, the successors left by the
+     * releases of multi-guard acquisitions. In a convoy of acquisitions of the same guards, the release of each
+     * finds the next one queued behind it. Running that inline at the release would nest every acquisition's body
+     * inside the previous one's (unbounded recursion), and handing each to the pool costs a pool hop per
+     * acquisition. Instead a loop runs one handoff at a time; the release of the acquisition which that handoff
+     * started (on the same thread, before the handoff returns) puts its own successor in the loop's slot, so the
+     * convoy runs on one thread at one pool hop per run of the loop, not per acquisition.
+     * <p>
+     * A loop only ever runs at the bottom of a pool task. Started inline, at a release with no loop on the thread,
+     * it would run below whatever called that code: a task which called runGuarded, its acquisition having run
+     * inline, would not return while the convoy (or a self-perpetuating queue) behind the acquisition went on, and
+     * that task's guards would stay held.
+     */
+    static final class Trampoline {
+        private static final ThreadLocal<Trampoline> CURRENT = ThreadLocal.withInitial(Trampoline::new);
+
+        /** The successor this loop is running, or null if no loop runs on this thread. */
+        private GuardTask running;
+        /** The successor this loop runs next, or null. */
+        private GuardTask slot;
+
+        /**
+         * Runs succ, a successor left by the release of the acquisition whose tasks are given, after that release.
+         * If this thread is running a trampoline loop, the loop's current successor started this acquisition (so
+         * that handoff returns to the loop as soon as this release does: a free_ loop stops after a dummy task),
+         * and the loop's slot is free, succ goes into the slot. Otherwise succ goes to the pool, as a loop of its
+         * own: this thread may have nothing to return to (no loop), or a user task's handoff, which can go on for
+         * as long as tasks keep being queued on its guard.
+         */
+        static void offer(GuardTask succ, List<GuardTask> acquisition) {
+            Trampoline tr = CURRENT.get();
+            if (tr.running != null && tr.slot == null && contains(acquisition, tr.running)) {
+                tr.slot = succ;
+            } else {
+                submit(succ);
+            }
+        }
+
+        private static boolean contains(List<GuardTask> acquisition, GuardTask t) {
+            for (int i = 0; i < acquisition.size(); i++) {
+                if (acquisition.get(i) == t) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /** Hands succ to the pool, as a trampoline loop of its own. */
+        static void submit(GuardTask succ) {
+            try {
+                Pool.run(() -> {
+                    Trampoline tr = CURRENT.get();
+                    if (tr.running == null) {
+                        tr.loop(succ);
+                    } else {
+                        // An executor which runs a submission synchronously (DebugPool, called outside its loop)
+                        // can run this inside another loop on the same thread.
+                        succ.handOff_();
+                    }
+                });
+            } catch (RejectedExecutionException e) {
+                // The pool was shut down or swapped. Running the successor inline is always safe; when this is
+                // called from releaseAll it only delays the release of the acquisition's remaining guards until the
+                // successor's chain of handoffs ends. Skipping it would strand every task queued on its guard.
+                succ.handOff_();
+            }
+        }
+
+        private void loop(GuardTask succ) {
+            try {
+                while (succ != null) {
+                    running = succ;
+                    slot = null;
+                    succ.handOff_();
+                    succ = slot;
+                }
+            } finally {
+                running = null;
+                slot = null;
+            }
         }
     }
 

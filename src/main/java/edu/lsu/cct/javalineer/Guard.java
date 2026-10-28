@@ -109,6 +109,10 @@ public class Guard implements Comparable<Guard> {
         var done = new CompletableFuture<Void>();
         assert gs.size() > 1;
 
+        // Every node of a multi-guard acquisition is a dummy task: a free_ loop which hands a guard to one of them
+        // runs it and stops, leaving the guard held, and run() does not free it. The last one runs the body and then
+        // releases every guard itself (GuardTask.releaseAll), so its successors never run on this thread before all
+        // of the guards are free (claims review F5 (b)).
         List<GuardTask> guardTasks = new ArrayList<>();
         for (Guard guard : gs) {
             guardTasks.add(new GuardTask(guard, gs));
@@ -117,26 +121,20 @@ public class Guard implements Comparable<Guard> {
         int last = gs.size() - 1;
         assert guardTasks.size() == gs.size();
 
-        // Set up the penultimate task
-        guardTasks.get(last - 1).setRun(() -> {
-            // Set up the ultimate task
-            gs.get(last).runGuarded_(gs, () -> {
-                // Never throws, so the guards below are always freed
-                Pool.runCapturing(r, done);
-                
-                // Last to run unlocks everything. Every guard but the last is released here before any task
-                // queued behind it runs, and a task found queued behind one is handed to the pool; the last guard
-                // is released by this task's own free_ when this returns. So no successor runs on this thread
-                // until all of the guards are released (claims review F5 (b)): an inline handoff here could run
-                // a self-perpetuating queue on one guard forever while the others stay held.
-                for (int i = 0; i < last; i++) {
-                    guardTasks.get(i).release();
-                }
-            });
+        // Set up the ultimate task: it holds every guard when it runs
+        guardTasks.get(last).setRun(() -> {
+            GuardTask.GUARDS_HELD.set(gs);
+            for (Guard g : gs)
+                assert g.locked.get();
+
+            // Never throws, so the guards below are always released
+            Pool.runCapturing(r, done);
+
+            GuardTask.releaseAll(guardTasks);
         });
 
         // Prior tasks, each calls the next
-        for (int i = 0; i < last - 1; i++) {
+        for (int i = 0; i < last; i++) {
             final int next = i + 1;
             final var guardTask = guardTasks.get(i);
             final var guardNext = gs.get(next);
