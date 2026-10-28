@@ -72,7 +72,9 @@ public final class PartitionableList<E> {
                                                   int nGhosts,
                                                   Function<ReadOnlyPartListView<E>, CompletableFuture<E>> chunkTask) {
         final var result = new CompletableFuture<E>();
-        final var tasksDone = new CountdownLatch(nChunks);
+        // The parts' completion (ProgressLatch.java): every part, its range release and its intermediate result. The
+        // final reduction starts only when every range of the call is free again.
+        final var progress = new ProgressLatch();
 
         final var intermediateList = new ArrayList<E>(nChunks);
         final var intermediateGuard = new Guard();
@@ -92,23 +94,24 @@ public final class PartitionableList<E> {
             Runnable task = () -> {
                 final var view = new ReadOnlyPartListView<>(data, lo, chunkSize, nGhosts, partNum, this);
                 Pool.callCapturing(() -> chunkTask.apply(view)).whenComplete((res, e) -> {
-                    this.rangeAccountant.runGuarded((rangeAccountantVar) -> {
+                    progress.add(Guard.runGuarded(this.rangeAccountant, (rangeAccountantVar) -> {
                         rangeAccountantVar.get().release(PartIntentKind.ReadOnly, lo, hi, nGhosts);
                         this.rangeAccountantCond.signalAll();
-                    });
+                    }));
 
                     if (e != null) {
-                        result.completeExceptionally(e);
-                        return;
+                        progress.fail(e);
+                    } else {
+                        progress.add(Guard.runGuarded(intermediateGuard, () -> {
+                            intermediateList.add(res);
+                        }));
                     }
 
-                    Guard.runGuarded(intermediateGuard, () -> {
-                        intermediateList.add(res);
-                        tasksDone.signal();
-                    });
+                    progress.arrive();
                 });
             };
 
+            progress.hold();
             if (partNum == nChunks - 1) {
                 ready.thenRun(task);
             } else {
@@ -116,7 +119,12 @@ public final class PartitionableList<E> {
             }
         }
 
-        tasksDone.getFut().thenRun(() -> {
+        progress.seal().whenComplete((v, t) -> {
+            if (t != null) {
+                result.completeExceptionally(t);
+                return;
+            }
+            // Every add to intermediateList happened before its future completed, so before the count reached 0.
             assert nChunks == intermediateList.size();
             final var view = new ReadOnlyPartListView<>(intermediateList, 0, nChunks, 0, 0, this);
             Pool.callCapturing(() -> chunkTask.apply(view)).whenComplete((res, e) -> {

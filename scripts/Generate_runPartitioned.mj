@@ -75,10 +75,10 @@ fn mkRangeRelease(rwList: list<string>) -> string {
     (for rw in rwList.enumerate() {
                 let j = rw.0 + 1;
                 push ##
-list${j}.rangeAccountant.runGuarded((rangeAccountantVar) -> {
+progress.add(Guard.runGuarded(list${j}.rangeAccountant, (rangeAccountantVar) -> {
     rangeAccountantVar.get().release(PartIntentKind.${rw.1}, lo${j}, hi${j}, nGhosts);
     list${j}.rangeAccountantCond.signalAll();
-});
+}));
         ##;
     }).join("\n\n")
 }
@@ -89,8 +89,9 @@ fn mkBody(rwList: list<string>) -> string {
 
     ##
 
-final var done = new CompletableFuture<Void>();
-final var tasksDone = new CountdownLatch(nChunks);
+// The call's completion (ProgressLatch.java): it waits for every part and, through each part, for each of the part's
+// range releases, so the returned future completes only when every range of the call is free again.
+final var progress = new ProgressLatch();
 
 ${mkListInits(rwList.len())}
 
@@ -106,12 +107,17 @@ for (int i = 0; i < nChunks; i++) {
             chunkTask.run(${viewList});
         } catch (Throwable e) {
             Pool.reportTaskFailure(e);
-            done.completeExceptionally(e);
+            progress.fail(e);
         }
-        tasksDone.signal();
 
+        // Release the part's ranges first, then arrive: each release is added to the latch (it may queue behind
+        // the list's guard, so it is waited for, not assumed done), and the part's hold is dropped only after.
         ${mkRangeRelease(rwList)}
+
+        progress.arrive();
     };
+
+    progress.hold();
 
     if (partNum == nChunks - 1) {
         ready.thenRun(task);
@@ -120,11 +126,7 @@ for (int i = 0; i < nChunks; i++) {
     }
 }
 
-tasksDone.getFut().thenRun(() -> {
-    done.complete(null);
-});
-
-return done;
+return progress.seal();
 
     ##.trim()
 }
@@ -134,8 +136,9 @@ fn mkBody2(rwList: list<string>) -> string {
     let viewList = ["view${i}" | i in [1..=rwList.len()]].join(", ");
 
     ##
-final var done = new CompletableFuture<Void>();
-final var tasksDone = new CountdownLatch(ranges.numPartitions());
+// The call's completion (ProgressLatch.java): it waits for every part and, through each part, for each of the part's
+// range releases, so the returned future completes only when every range of the call is free again.
+final var progress = new ProgressLatch();
 
 ${mkListInits(rwList.len())}
 
@@ -151,12 +154,17 @@ for (int i = 0; i < ranges.numPartitions(); i++) {
             chunkTask.run(${viewList});
         } catch (Throwable e) {
             Pool.reportTaskFailure(e);
-            done.completeExceptionally(e);
+            progress.fail(e);
         }
-        tasksDone.signal();
 
+        // Release the part's ranges first, then arrive: each release is added to the latch (it may queue behind
+        // the list's guard, so it is waited for, not assumed done), and the part's hold is dropped only after.
         ${mkRangeRelease(rwList)}
+
+        progress.arrive();
     };
+
+    progress.hold();
 
     if (partNum == ranges.numPartitions() - 1) {
         ready.thenRun(task);
@@ -165,11 +173,7 @@ for (int i = 0; i < ranges.numPartitions(); i++) {
     }
 }
 
-tasksDone.getFut().thenRun(() -> {
-    done.complete(null);
-});
-
-return done;
+return progress.seal();
 
     ##.trim()
 }
