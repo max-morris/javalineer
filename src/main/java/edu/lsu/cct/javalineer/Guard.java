@@ -127,8 +127,14 @@ public class Guard implements Comparable<Guard> {
             for (Guard g : gs)
                 assert g.locked.get();
 
-            // Never throws, so the guards below are always released
-            Pool.runCapturing(r, done);
+            // Never throws, so the guards below are always released. Counted as a body, as run_ counts a user
+            // task's, so that a single-guard acquisition nested in it defers its successors (GuardTask.free_).
+            var tr = GuardTask.Trampoline.enterBody();
+            try {
+                Pool.runCapturing(r, done);
+            } finally {
+                tr.bodies--;
+            }
 
             GuardTask.releaseAll(guardTasks);
         });

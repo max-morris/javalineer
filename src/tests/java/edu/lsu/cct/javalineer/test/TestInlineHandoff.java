@@ -18,7 +18,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  * guards must still be released. Before the fix, the release ran the queue inline on the body's thread, ahead of the
  * release of the last guard, which then stayed held for as long as the queue went on.
  * <p>
- * The last case checks the same for the task which called runGuarded, when the acquisition ran inline inside it.
+ * The nested cases check the same for the task which called runGuarded, when the acquisition ran inline inside it:
+ * an acquisition of two guards (the trampoline), and a single-guard acquisition (Nest1: its release must not run
+ * the queue behind it inside the caller's body either).
  * <p>
  * Each case waits at most TIMEOUT_SECONDS for the guards; on a timeout it stops the queue, so the program never
  * hangs, and exits with status 1.
@@ -104,21 +106,23 @@ public class TestInlineHandoff {
     }
 
     /**
-     * The caller of an acquisition which runs inline must not be held by the queue behind it either. A task on c
-     * (which holds c) calls runGuarded(body, a, b) while a and b are free, so the acquisition and its body run inline
-     * inside the task; the body links the first task of a chain on a behind the acquisition. When the body finishes,
-     * a and b are released, and the chain's next task is owed a run by this thread. Running it here (on master, or a
-     * trampoline started inline) runs the chain on the task's thread for as long as it goes on, so the task never
-     * returns and c stays held.
+     * The caller of an acquisition which runs inline must not be held by the queue behind it either. A task on the
+     * outer guards (which holds them) calls runGuarded(body, inner) while the inner guards are free, so the
+     * acquisition and its body run inline inside the task; the body links the first task of a chain on inner[0]
+     * behind the acquisition. When the body finishes, the inner guards are released, and the chain's next task is
+     * owed a run by this thread. Running it here (on master, or a trampoline started inline, or, for a single inner
+     * guard, the free_ loop before the Nest1 fix) runs the chain on the task's thread for as long as it goes on, so
+     * the task never returns and its outer guards stay held. With several outer levels, each runs the next one in
+     * inline inside its body (outer[0] directly around the inner acquisition). Every guard but inner[0] is probed.
      */
-    static boolean checkNested(String name) throws Exception {
-        var gs = guards(3);
-        Guard a = gs[0], b = gs[1], c = gs[2];
+    static boolean checkNested(String name, Guard[] inner, Guard[]... outer) throws Exception {
+        Guard a = inner[0];
         var chain = new Chain(a, () -> { });
         var bodyRan = new CountDownLatch(1);
         var linked = new CountDownLatch(1);
-        Pool.run(() -> c.runGuarded(() -> Guard.runGuarded(() -> {
-            // Inside the acquisition of a and b, inside the task on c: the chain's first task queues behind it on a.
+        Runnable task = () -> Guard.runGuarded(() -> {
+            // Inside the inner acquisition, inside the task on the outer guards: the chain's first task queues
+            // behind it on a.
             Pool.run(() -> {
                 a.runGuarded(chain::link);
                 linked.countDown();
@@ -131,18 +135,30 @@ public class TestInlineHandoff {
                 throw new RuntimeException(e);
             }
             bodyRan.countDown();
-        }, a, b)));
+        }, inner);
+        for (Guard[] level : outer) {
+            final Runnable in = task;
+            task = () -> Guard.runGuarded(in, level);
+        }
+        Pool.run(task);
         boolean ok = true;
         try {
             if (!bodyRan.await(TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
                 throw new AssertionError("FAILED " + name + ": the acquisition's body never ran");
             }
-            for (int i = 1; i < gs.length; i++) {
-                var probe = gs[i].runGuarded(() -> { });
+            var probed = new java.util.ArrayList<Guard>();
+            for (int i = 1; i < inner.length; i++) {
+                probed.add(inner[i]);
+            }
+            for (Guard[] level : outer) {
+                probed.addAll(java.util.Arrays.asList(level));
+            }
+            for (Guard g : probed) {
+                var probe = g.runGuarded(() -> { });
                 try {
                     probe.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
                 } catch (TimeoutException e) {
-                    System.out.println("FAILED " + name + ": guard " + i + " still held " + TIMEOUT_SECONDS
+                    System.out.println("FAILED " + name + ": guard " + g + " still held " + TIMEOUT_SECONDS
                             + " s after the body finished (chain at " + chain.links.get() + " tasks)");
                     ok = false;
                 }
@@ -154,6 +170,22 @@ public class TestInlineHandoff {
             System.out.println("ok " + name);
         }
         return ok;
+    }
+
+    /** checkNested on fresh guards, with the given numbers of inner and outer guards (one guard set per level). */
+    static boolean checkNested(String name, int inner, int... outer) throws Exception {
+        int total = inner;
+        for (int k : outer) {
+            total += k;
+        }
+        var gs = guards(total);
+        var levels = new Guard[outer.length][];
+        int at = inner;
+        for (int l = 0; l < outer.length; l++) {
+            levels[l] = java.util.Arrays.copyOfRange(gs, at, at + outer[l]);
+            at += outer[l];
+        }
+        return checkNested(name, java.util.Arrays.copyOfRange(gs, 0, inner), levels);
     }
 
     static Guard[] guards(int n) {
@@ -176,7 +208,12 @@ public class TestInlineHandoff {
             ok &= check("three guards, chain on the first", guards(3), 0);
             ok &= check("four guards, chain on the third", guards(4), 2);
             ok &= check("two guards, chain on the second", guards(2), 1);
-            ok &= checkNested("an inline acquisition of two guards inside a task on a third, chain on the first");
+            ok &= checkNested("an inline acquisition of two guards inside a task on a third, chain on the first",
+                    2, 1);
+            ok &= checkNested("Nest1: an inline single-guard acquisition inside a task on another guard", 1, 1);
+            ok &= checkNested("Nest1: an inline single-guard acquisition inside a task on two other guards", 1, 2);
+            ok &= checkNested("Nest1: an inline single-guard acquisition inside an inline single-guard"
+                    + " acquisition inside a task on a third guard", 1, 1, 1);
         }
 
         if (!ok) {

@@ -51,7 +51,17 @@ public class GuardTask {
                 assert g.locked.get();
         }
         try {
-            r.run();
+            if (isUserTask()) {
+                // A user task's runnable is the body: counted, so that free_ knows when it runs inside one.
+                Trampoline tr = Trampoline.enterBody();
+                try {
+                    r.run();
+                } finally {
+                    tr.bodies--;
+                }
+            } else {
+                r.run();
+            }
         } catch (Throwable t) {
             // An exception must never escape from here: it would skip free_(), leaving the guard locked, or
             // break the hand-off loop in free_(), stranding every task queued behind this one. It would also
@@ -132,6 +142,23 @@ public class GuardTask {
         private GuardTask running;
         /** The successor this loop runs next, or null. */
         private GuardTask slot;
+        /**
+         * The number of bodies running on this thread (nested acquisitions run their bodies inline inside their
+         * caller's). Positive means that whatever runs now runs inside the body of a task that holds guards.
+         */
+        int bodies;
+
+        /** Whether this thread is running the body of a guarded task (see {@link GuardTask#free_()}). */
+        static boolean inBody() {
+            return CURRENT.get().bodies > 0;
+        }
+
+        /** Counts a body starting on this thread; the caller decrements bodies of the result when it ends. */
+        static Trampoline enterBody() {
+            Trampoline tr = CURRENT.get();
+            tr.bodies++;
+            return tr;
+        }
 
         /**
          * Runs succ, a successor left by the release of the acquisition whose tasks are given, after that release.
@@ -216,11 +243,32 @@ public class GuardTask {
         }
     }
 
+    /**
+     * Releases this single-guard user task's guard and runs the tasks queued behind it, one after the other, until
+     * the queue is empty or it reaches a dummy task. Called only by {@link #run()}, that is, where runGuarded ran this
+     * task inline on its caller's thread.
+     * <p>
+     * If that caller is itself the body of a guarded task (an acquisition nested inside another), the successor is
+     * not run here but handed to the pool, where it starts a {@link Trampoline} loop: the caller's guards are held
+     * until it returns, and the queue behind this guard may never end (each of its tasks enqueuing another on the
+     * same guard), so running it here could hold them forever (Nest1, the single-guard form of claims review
+     * F5 (b)). The rule is the trampoline's: successors run inline only at the bottom of a pool task, or at top
+     * level, where no guard is held below them. At top level (no body on this thread) the loop is unchanged, so a
+     * convoy on one guard still runs inline; the nested acquisition itself still ran inline, and only the run of
+     * its successor moves, and only when there is one.
+     */
     private void free_() {
         var ok = guard.locked.compareAndSet(true, false);
         assert ok;
         var n = next;
-        while (!n.compareAndSet(null, DONE)) {
+        if (n.compareAndSet(null, DONE)) {
+            return;
+        }
+        if (Trampoline.inBody()) {
+            Trampoline.submit(n.get());
+            return;
+        }
+        do {
             final GuardTask gt = n.get();
             gt.run_();
             if (gt.isDummyTask()) {
@@ -229,7 +277,7 @@ public class GuardTask {
             ok = gt.guard.locked.compareAndSet(true, false);
             assert ok;
             n = gt.next;
-        }
+        } while (!n.compareAndSet(null, DONE));
     }
 
     public String toString() {
