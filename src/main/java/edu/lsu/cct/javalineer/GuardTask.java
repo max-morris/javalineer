@@ -1,9 +1,10 @@
 package edu.lsu.cct.javalineer;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -18,6 +19,22 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class GuardTask extends CompletableFuture<Void> {
     final static AtomicInteger nextId = new AtomicInteger(-1);
 
+    /**
+     * The link to the successor, accessed only through {@link #NEXT} with volatile semantics (compareAndSet,
+     * getAndSet), exactly as the AtomicReference it replaces was: a field of the task itself rather than a
+     * separate object, so the queue costs one object (and one cache line) less per task.
+     */
+    private volatile GuardTask next;
+    private static final VarHandle NEXT;
+
+    static {
+        try {
+            NEXT = MethodHandles.lookup().findVarHandle(GuardTask.class, "next", GuardTask.class);
+        } catch (ReflectiveOperationException e) {
+            throw new ExceptionInInitializerError(e);
+        }
+    }
+
     final static GuardTask DONE = new GuardTask(null, () -> {
         assert false : "DONE should not be executed";
     }, null);
@@ -26,7 +43,6 @@ public class GuardTask extends CompletableFuture<Void> {
     final static ThreadLocal<GuardSet> GUARDS_HELD = new ThreadLocal<>();
 
     final int id = nextId.getAndIncrement();
-    final AtomicReference<GuardTask> next = new AtomicReference<>();
     final Guard guard;
     final GuardSet guardsHeld;
 
@@ -125,6 +141,15 @@ public class GuardTask extends CompletableFuture<Void> {
     }
 
     /**
+     * The enqueuer's step on next (Guard.runGuarded_, Guard.dummyRunGuarded): links succ behind this task, its
+     * predecessor, by a CAS of next from null to succ. If it fails, this task has already been released (next is
+     * DONE) and the enqueuer must run succ itself.
+     */
+    boolean link(GuardTask succ) {
+        return NEXT.compareAndSet(this, null, succ);
+    }
+
+    /**
      * The release's step on next, after the guard is cleared: sets next to DONE and returns what it held. If that
      * was null, there was no successor, and an enqueuer which later finds this task as its predecessor fails its
      * CAS from null and runs its own task (as with a CAS of next from null to DONE). Otherwise a successor had
@@ -137,7 +162,7 @@ public class GuardTask extends CompletableFuture<Void> {
      * @return The successor, or null if there is none.
      */
     private GuardTask takeNext() {
-        GuardTask succ = next.getAndSet(DONE);
+        GuardTask succ = (GuardTask) NEXT.getAndSet(this, DONE);
         assert succ != DONE : "A task was released twice.";
         return succ;
     }

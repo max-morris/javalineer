@@ -2,11 +2,12 @@ package edu.lsu.cct.javalineer;
 
 import edu.lsu.cct.javalineer.functionalinterfaces.*;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * A guard: mutual exclusion with an implicit task queue.
@@ -45,7 +46,20 @@ public class Guard implements Comparable<Guard> {
         return Objects.hash(id);
     }
 
-    final AtomicReference<GuardTask> next = new AtomicReference<>();
+    /**
+     * The tail of this guard's task queue (the last task enqueued), or null if no task was ever enqueued. Accessed
+     * only through {@link #NEXT} with volatile semantics (getAndSet), as the AtomicReference it replaces was.
+     */
+    private volatile GuardTask next;
+    private static final VarHandle NEXT;
+
+    static {
+        try {
+            NEXT = MethodHandles.lookup().findVarHandle(Guard.class, "next", GuardTask.class);
+        } catch (ReflectiveOperationException e) {
+            throw new ExceptionInInitializerError(e);
+        }
+    }
 
     /**
      * Runs r while holding this guard.
@@ -61,11 +75,11 @@ public class Guard implements Comparable<Guard> {
     private GuardTask runGuarded_(GuardSet guardsHeld, Runnable r) {
         GuardTask gTask = new GuardTask(this, r, guardsHeld);
         assert gTask.isUserTask();
-        var prev = next.getAndSet(gTask);
+        var prev = (GuardTask) NEXT.getAndSet(this, gTask);
         if (prev == null) {
             gTask.run();
         } else {
-            if (!prev.next.compareAndSet(null, gTask)) {
+            if (!prev.link(gTask)) {
                 gTask.run();
             }
         }
@@ -74,11 +88,11 @@ public class Guard implements Comparable<Guard> {
 
     private void dummyRunGuarded(GuardTask gTask) {
         assert gTask.isDummyTask();
-        var prev = next.getAndSet(gTask);
+        var prev = (GuardTask) NEXT.getAndSet(this, gTask);
         if (prev == null) {
             gTask.run();
         } else {
-            if (!prev.next.compareAndSet(null, gTask)) {
+            if (!prev.link(gTask)) {
                 gTask.run();
             }
         }
