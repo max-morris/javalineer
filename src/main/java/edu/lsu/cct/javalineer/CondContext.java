@@ -67,7 +67,7 @@ public final class CondContext<T extends CondTask> {
         snapshot().thenAccept(tasks -> {
             Guard.runGuarded(gSet, () -> {
                 for (var task : tasks) {
-                    if (!task.done) {
+                    if (task != null && !task.done) {
                         task.runCapturing();
                         if (task.done) {
                             break;
@@ -82,7 +82,7 @@ public final class CondContext<T extends CondTask> {
         snapshot().thenAccept(tasks -> {
             Guard.runGuarded(gSet, () -> {
                 for (var task : tasks) {
-                    if (!task.done) {
+                    if (task != null && !task.done) {
                         task.runCapturing();
                     }
                 }
@@ -96,6 +96,11 @@ public final class CondContext<T extends CondTask> {
         });
     }
 
+    /**
+     * The waiters as they are now, for one signal or signalAll: a list of the tasks which are not done, in
+     * order, possibly with nulls (to be skipped) in place of tasks which were done. No one writes to it after it
+     * is handed out.
+     */
     private CompletableFuture<List<T>> snapshot() {
         var tasksFut = new CompletableFuture<List<T>>();
 
@@ -103,8 +108,11 @@ public final class CondContext<T extends CondTask> {
             var tasks = tasksVar.get();
             var taskList = new ArrayList<T>(tasks.size());
 
-            for (var task : tasks) {
-                if (!task.done) {
+            for (int i = 0; i < tasks.size(); i++) {
+                var task = tasks.get(i);
+                if (task.done) {
+                    tasks.set(i, null);
+                } else {
                     taskList.add(task);
                 }
             }
@@ -113,8 +121,12 @@ public final class CondContext<T extends CondTask> {
             // taskList is now the live waiter list: enq appends to it under the tasks guard. The future's
             // consumers (signal, signalAll) iterate under gSet, a different guard, so they must never see
             // taskList itself, or a late enq could race the iteration (ConcurrentModificationException or a
-            // skipped waiter, i.e. a lost wakeup). Hand out an immutable copy instead.
-            tasksFut.complete(List.copyOf(taskList));
+            // skipped waiter, i.e. a lost wakeup). Hand out the replaced list, tasks, instead of a copy of
+            // taskList: enq and snapshot reach the live list only through tasksVar, under the tasks guard, so
+            // from here on no one writes to tasks, and every write to it (the appends of earlier enqs, the
+            // nulls above) happens before this completion. With the done tasks nulled out it holds exactly the
+            // tasks of taskList, in the same order, so the consumers see the same waiters as with a copy.
+            tasksFut.complete(tasks);
         });
 
         return tasksFut;
