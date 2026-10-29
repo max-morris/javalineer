@@ -5,7 +5,6 @@ import java.lang.invoke.VarHandle;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A node of a guard's task queue. A user task (one single-guard {@link Guard#runGuarded(Runnable)}) is also the
@@ -17,8 +16,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * multi-guard acquisition) are never completed; the multi-guard path returns a future of its own.
  */
 public class GuardTask extends CompletableFuture<Void> {
-    final static AtomicInteger nextId = new AtomicInteger(-1);
-
     /**
      * The link to the successor, accessed only through {@link #NEXT} with volatile semantics (compareAndSet,
      * getAndSet), exactly as the AtomicReference it replaces was: a field of the task itself rather than a
@@ -42,7 +39,6 @@ public class GuardTask extends CompletableFuture<Void> {
 
     final static ThreadLocal<GuardSet> GUARDS_HELD = new ThreadLocal<>();
 
-    final int id = nextId.getAndIncrement();
     final Guard guard;
     final GuardSet guardsHeld;
 
@@ -68,7 +64,6 @@ public class GuardTask extends CompletableFuture<Void> {
     }
 
     private void run_() {
-        int id = ThreadID.get();
         var ok = guard.locked.compareAndSet(false, true);
         assert ok : String.format("%s %d %d", this, ThreadID.get(), guardsHeld.size());
         if (isUserTask()) {
@@ -350,7 +345,9 @@ public class GuardTask extends CompletableFuture<Void> {
     }
 
     public String toString() {
-        return "gt[" + id + "," + guard + "," + next + "]";
+        // An identity hash, not a sequence number: a global counter would be one more cache line that every
+        // issuing core writes on every operation, for the sake of this method alone.
+        return "gt[" + Integer.toHexString(System.identityHashCode(this)) + "," + guard + "," + next + "]";
     }
 
     public boolean isUserTask() {
