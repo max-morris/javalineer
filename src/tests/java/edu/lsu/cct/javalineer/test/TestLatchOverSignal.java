@@ -38,7 +38,40 @@ public class TestLatchOverSignal {
         check(started.await(30, TimeUnit.SECONDS), "every signaler ran");
         check(reports.isEmpty(), "no report for signals within the count, got " + reports);
 
-        // Two more: two reports, each an IllegalStateException.
+        // The future completes at the count's last signal, not before, and once.
+        var three = new CountdownLatch(3);
+        var completions = new java.util.concurrent.atomic.AtomicInteger();
+        three.getFut().thenRun(completions::incrementAndGet);
+        three.signal();
+        three.signal();
+        check(!three.getFut().isDone(), "a latch counting 3 is incomplete after 2 signals");
+        three.signal();
+        check(three.getFut().isDone(), "a latch counting 3 is complete after its third signal, on the signaling thread");
+        check(completions.get() == 1, "its dependents ran once");
+        check(reports.isEmpty(), "no report for signals within the count of a second latch, got " + reports);
+
+        // Everything a signaler did before its signal is visible once the future completes.
+        int m = 1000;
+        var flags = new boolean[m];
+        var hb = new CountdownLatch(m);
+        for (int i = 0; i < m; i++) {
+            final int k = i;
+            Pool.run(() -> {
+                flags[k] = true;
+                hb.signal();
+            });
+        }
+        var all = hb.getFut().thenApply(v -> {
+            for (boolean f : flags) {
+                if (!f) {
+                    return false;
+                }
+            }
+            return true;
+        }).get(30, TimeUnit.SECONDS);
+        check(all, "every signaler's write happens-before the latch's completion");
+
+        // Two more on the first latch: two reports, each an IllegalStateException.
         latch.signal();
         latch.signal();
         check(reports.size() == 2, "two reports for two extra signals, got " + reports.size());

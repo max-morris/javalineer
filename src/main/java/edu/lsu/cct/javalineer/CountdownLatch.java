@@ -2,18 +2,27 @@ package edu.lsu.cct.javalineer;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * A latch whose future completes after its count of signals. The count is an atomic integer: a signal is one
+ * decrement, and the signal which takes it to zero completes the future, on the signaling thread. No guards, no
+ * condition, no copies. Each decrement is a read-modify-write of the one count, so everything a signaler did before
+ * its signal happens-before the future's completion, as it did when the count was a guarded variable.
+ */
 public class CountdownLatch extends Latch<Integer> {
-    // The signals still expected. Once the latch's future completes, its condition is gone, so a further signal would
-    // be ignored; this notices it.
+    private final int count;
+    // The signals still expected; negative once the latch has been signaled more often than its count.
     private final AtomicInteger remaining;
 
     public CountdownLatch(int n) {
-        // n + 1 because runCondition will immediately decrement by 1
-        super(checkCount(n) + 1, counter -> {
-            counter.set(counter.get() - 1);
-            return counter.get() == 0;
-        });
+        super();
+        count = checkCount(n);
         remaining = new AtomicInteger(n);
+        if (n == 0) {
+            complete();
+        } else {
+            // For a deadlock report (Pool.join): a latch signaled fewer times than its count waits forever.
+            Pool.trackPending(getFut(), "latch", this);
+        }
     }
 
     // A negative count would never reach zero, so the latch's future could never complete.
@@ -30,10 +39,18 @@ public class CountdownLatch extends Latch<Integer> {
      * {@link Pool#setTaskFailureHandler}), and otherwise ignored, as it always was.
      */
     @Override
-    protected void beforeSignal() {
-        if (remaining.getAndDecrement() <= 0) {
+    final void countDown() {
+        int left = remaining.decrementAndGet();
+        if (left == 0) {
+            complete();
+        } else if (left < 0) {
             Pool.reportTaskFailure(new IllegalStateException(
                     "CountdownLatch signaled more times than its count"));
         }
+    }
+
+    @Override
+    public String toString() {
+        return "CountdownLatch(" + Math.max(0, remaining.get()) + " of " + count + " signals to go)";
     }
 }

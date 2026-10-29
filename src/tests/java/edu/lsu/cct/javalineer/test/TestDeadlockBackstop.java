@@ -89,7 +89,8 @@ public class TestDeadlockBackstop {
             Pool.trackPending(p, "continuation completing its own future", "p");
             p.thenAccept(v -> p.complete(v));
             var report = expectDeadlock("under-signaled latch", latch.getFut().thenCombine(p, (a, b) -> b));
-            check(report.contains("condition task"), "the report lists the latch's condition task");
+            check(report.contains("latch of CountdownLatch(1 of 3 signals to go)"),
+                  "the report lists the latch, with the signals it still expects");
             check(report.contains("CountdownLatch.<init>"), "the report shows where the latch was created");
             check(report.contains("continuation completing its own future of p"),
                   "the report lists the registered continuation");
