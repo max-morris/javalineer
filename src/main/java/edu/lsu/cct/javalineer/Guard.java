@@ -11,12 +11,13 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * A guard: mutual exclusion with an implicit task queue.
  * <p>
- * Exceptions: every task given to {@code runGuarded} or {@code runCondition} runs through {@link Pool#runCapturing} or
- * {@link CondTask#runCapturing}, so a task which throws completes its future exceptionally instead of propagating the
- * exception to whoever happened to run it (which, for an uncontended guard, is the caller of {@code runGuarded}). The
- * guards are released whether or not the task throws, and tasks queued behind it still run. The failure is reported
- * to the handler set by {@link Pool#setTaskFailureHandler}, if any. A conditional task which throws is finished: it is
- * not retried.
+ * Exceptions: every task given to {@code runGuarded} or {@code runCondition} runs through {@link Pool#runCapturing},
+ * {@link CondTask#runCapturing} or, for a single-guard {@code runGuarded}, the same capture in its own task node
+ * ({@link GuardTask}, which is the future returned), so a task which throws completes its future exceptionally
+ * instead of propagating the exception to whoever happened to run it (which, for an uncontended guard, is the caller
+ * of {@code runGuarded}). The guards are released whether or not the task throws, and tasks queued behind it still
+ * run. The failure is reported to the handler set by {@link Pool#setTaskFailureHandler}, if any. A conditional task
+ * which throws is finished: it is not retried.
  */
 @SuppressWarnings("unused")
 public class Guard implements Comparable<Guard> {
@@ -46,15 +47,18 @@ public class Guard implements Comparable<Guard> {
 
     final AtomicReference<GuardTask> next = new AtomicReference<>();
 
+    /**
+     * Runs r while holding this guard.
+     *
+     * @param r The task.
+     * @return A future which completes when r returns, or completes exceptionally if r throws. It is the task's
+     *         queue node itself (see {@link GuardTask}), so no separate future is allocated.
+     */
     public CompletableFuture<Void> runGuarded(Runnable r) {
-        var done = new CompletableFuture<Void>();
-        
-        runGuarded_(GuardSet.of(this), () -> Pool.runCapturing(r, done));
-        
-        return done;
+        return runGuarded_(GuardSet.of(this), r);
     }
 
-    private void runGuarded_(GuardSet guardsHeld, Runnable r) {
+    private GuardTask runGuarded_(GuardSet guardsHeld, Runnable r) {
         GuardTask gTask = new GuardTask(this, r, guardsHeld);
         assert gTask.isUserTask();
         var prev = next.getAndSet(gTask);
@@ -65,6 +69,7 @@ public class Guard implements Comparable<Guard> {
                 gTask.run();
             }
         }
+        return gTask;
     }
 
     private void dummyRunGuarded(GuardTask gTask) {

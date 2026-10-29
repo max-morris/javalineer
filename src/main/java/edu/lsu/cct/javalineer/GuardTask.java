@@ -1,11 +1,21 @@
 package edu.lsu.cct.javalineer;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class GuardTask {
+/**
+ * A node of a guard's task queue. A user task (one single-guard {@link Guard#runGuarded(Runnable)}) is also the
+ * future that call returns: run_ completes it when the task's runnable returns, or completes it exceptionally if the
+ * runnable throws, before the guard is released. That saves the separate future and the capturing wrapper which
+ * would otherwise be allocated per operation and kept alive in the queue. The queue machinery reads only r, next,
+ * guard, guardsHeld and isDummyTask, never the future's state, so a caller who completes, cancels or obtrudes the
+ * returned future changes only what the future reports, as with a separate future. Dummy tasks (the nodes of a
+ * multi-guard acquisition) are never completed; the multi-guard path returns a future of its own.
+ */
+public class GuardTask extends CompletableFuture<Void> {
     final static AtomicInteger nextId = new AtomicInteger(-1);
 
     final static GuardTask DONE = new GuardTask(null, () -> {
@@ -49,24 +59,46 @@ public class GuardTask {
             GUARDS_HELD.set(guardsHeld);
             for (Guard g : guardsHeld)
                 assert g.locked.get();
-        }
-        try {
-            if (isUserTask()) {
-                // A user task's runnable is the body: counted, so that free_ knows when it runs inside one.
-                Trampoline tr = Trampoline.enterBody();
+            // The task is its own future (as Pool.runCapturing does for a separate one): completed normally if r
+            // returns, exceptionally (after reporting to the failure handler) if r throws. Either way nothing
+            // escapes, and the future's dependents run here, on this thread, while the guard is still held.
+            // The runnable and the completion (with the dependents it runs) are the body: counted, so that free_
+            // knows when it runs inside one (as the separate future's completion was, inside the runnable).
+            Trampoline tr = Trampoline.enterBody();
+            try {
+                Throwable failure = null;
                 try {
                     r.run();
-                } finally {
-                    tr.bodies--;
+                } catch (Throwable t) {
+                    failure = t;
                 }
-            } else {
-                r.run();
+                // A caller may keep the future (this task) long after it ran; it must not keep r and what r
+                // captured. run_ runs once per task, so r is never read again.
+                r = null;
+                try {
+                    if (failure == null) {
+                        complete(null);
+                    } else {
+                        Pool.reportTaskFailure(failure);
+                        completeExceptionally(failure);
+                    }
+                } catch (Throwable t) {
+                    // Not expected (complete runs dependents but captures what they throw); see below.
+                    Pool.reportTaskFailure(t);
+                }
+            } finally {
+                tr.bodies--;
             }
+            return;
+        }
+        try {
+            r.run();
         } catch (Throwable t) {
             // An exception must never escape from here: it would skip free_(), leaving the guard locked, or
             // break the hand-off loop in free_(), stranding every task queued behind this one. It would also
-            // propagate into whatever unrelated code happens to be running this task. Tasks submitted through
-            // Guard capture their own exceptions into their futures, so this is only a safety net.
+            // propagate into whatever unrelated code happens to be running this task. A dummy task's runnable
+            // enqueues the next node, or runs a multi-guard body through Pool.runCapturing, so this is only a
+            // safety net.
             Pool.reportTaskFailure(t);
         }
     }
@@ -89,11 +121,25 @@ public class GuardTask {
         assert isDummyTask : "Calling GuardTask.release() on a user task.";
         var ok = guard.locked.compareAndSet(true, false);
         assert ok;
-        if (next.compareAndSet(null, DONE)) {
-            return null;
-        }
-        // The CAS failed, so a successor linked itself behind this task and this thread alone must run it.
-        return next.get();
+        return takeNext();
+    }
+
+    /**
+     * The release's step on next, after the guard is cleared: sets next to DONE and returns what it held. If that
+     * was null, there was no successor, and an enqueuer which later finds this task as its predecessor fails its
+     * CAS from null and runs its own task (as with a CAS of next from null to DONE). Otherwise a successor had
+     * linked itself behind this task, and this thread alone must now run it (or hand it on). That successor's
+     * enqueuer was the only one ever given this task as its predecessor, and it has finished with next, so no one
+     * reads next again: overwriting it with DONE, instead of leaving the successor there as a failed CAS would, is
+     * invisible to the queue. It drops the link, so that a caller keeping this task's future does not keep alive
+     * every task queued on the guard after it.
+     *
+     * @return The successor, or null if there is none.
+     */
+    private GuardTask takeNext() {
+        GuardTask succ = next.getAndSet(DONE);
+        assert succ != DONE : "A task was released twice.";
+        return succ;
     }
 
     /**
@@ -235,11 +281,10 @@ public class GuardTask {
             }
             var ok = gt.guard.locked.compareAndSet(true, false);
             assert ok;
-            var n = gt.next;
-            if (n.compareAndSet(null, DONE)) {
+            gt = gt.takeNext();
+            if (gt == null) {
                 return;
             }
-            gt = n.get();
         }
     }
 
@@ -260,24 +305,23 @@ public class GuardTask {
     private void free_() {
         var ok = guard.locked.compareAndSet(true, false);
         assert ok;
-        var n = next;
-        if (n.compareAndSet(null, DONE)) {
+        GuardTask gt = takeNext();
+        if (gt == null) {
             return;
         }
         if (Trampoline.inBody()) {
-            Trampoline.submit(n.get());
+            Trampoline.submit(gt);
             return;
         }
         do {
-            final GuardTask gt = n.get();
             gt.run_();
             if (gt.isDummyTask()) {
                 return;
             }
             ok = gt.guard.locked.compareAndSet(true, false);
             assert ok;
-            n = gt.next;
-        } while (!n.compareAndSet(null, DONE));
+            gt = gt.takeNext();
+        } while (gt != null);
     }
 
     public String toString() {
