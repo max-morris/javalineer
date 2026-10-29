@@ -69,7 +69,24 @@ public class Guard implements Comparable<Guard> {
      *         queue node itself (see {@link GuardTask}), so no separate future is allocated.
      */
     public CompletableFuture<Void> runGuarded(Runnable r) {
-        return runGuarded_(GuardSet.of(this), r);
+        return runGuarded_(self(), r);
+    }
+
+    /**
+     * The one-guard set of this guard, which every single-guard task holds, built on first use instead of once
+     * per task. A plain field with a benign race: GuardSet is immutable (final fields only), so a thread which
+     * sees the reference sees a complete set, and two threads racing on the first use at worst build two equal
+     * sets, either of which is correct.
+     */
+    private GuardSet self;
+
+    private GuardSet self() {
+        GuardSet s = self;
+        if (s == null) {
+            s = GuardSet.of(this);
+            self = s;
+        }
+        return s;
     }
 
     private GuardTask runGuarded_(GuardSet guardsHeld, Runnable r) {
