@@ -72,7 +72,12 @@ final class GuardTask extends CompletableFuture<Void> {
     private void run_() {
         var ok = guard.locked.compareAndSet(false, true);
         assert ok : String.format("%s %d %d", this, ThreadID.get(), guardsHeld.size());
+        // The guards held by whatever this thread was running: a body this one is nested in, or none. Restored when
+        // the body ends, so that an enclosing body goes on seeing its own guards, and a thread that runs no body sees
+        // none.
+        GuardSet outerHeld = null;
         if (isUserTask()) {
+            outerHeld = GUARDS_HELD.get();
             GUARDS_HELD.set(guardsHeld);
             for (Guard g : guardsHeld)
                 assert g.locked.get();
@@ -105,6 +110,9 @@ final class GuardTask extends CompletableFuture<Void> {
                 }
             } finally {
                 tr.bodies--;
+                // After the completion, so that the future's dependents, which run inside it, still see the body's
+                // guards.
+                GUARDS_HELD.set(outerHeld);
             }
             return;
         }

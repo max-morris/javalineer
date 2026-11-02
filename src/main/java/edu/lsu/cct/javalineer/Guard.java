@@ -153,6 +153,8 @@ public class Guard implements Comparable<Guard> {
 
         // Set up the ultimate task: it holds every guard when it runs
         guardTasks.get(last).setRun(() -> {
+            // As in GuardTask.run_, the guards held before the body are restored when it ends.
+            var outerHeld = GuardTask.GUARDS_HELD.get();
             GuardTask.GUARDS_HELD.set(gs);
             for (Guard g : gs)
                 assert g.locked.get();
@@ -164,6 +166,7 @@ public class Guard implements Comparable<Guard> {
                 Pool.runCapturing(r, done);
             } finally {
                 tr.bodies--;
+                GuardTask.GUARDS_HELD.set(outerHeld);
             }
 
             GuardTask.releaseAll(guardTasks);
