@@ -63,6 +63,26 @@ public class TestGuardsHeld {
             check(av.get() + bv.get() == 3, "the body still reads a and b");
         }).get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
+        // A single-guard task is its own future, completed at the end of its body while its guards are still held:
+        // a continuation registered while the task waits in the queue runs inside that completion and sees the
+        // body's guards, whether the body returns or throws. (The held guards are restored after the completion.)
+        var queued = new ArrayList<CompletableFuture<?>>();
+        Guard.runGuarded(a, av -> {
+            queued.add(Guard.runGuarded(a, av2 -> { }).thenRun(() -> {
+                check(Guard.has(a), "a continuation of a queued task's future holds a");
+                check(av.get() == 1, "a continuation of a queued task's future reads a");
+            }));
+            queued.add(Guard.runGuarded(a, av2 -> {
+                throw new RuntimeException("expected by TestGuardsHeld");
+            }).handle((v, t) -> {
+                check(t != null && Guard.has(a), "a continuation of a failed queued task's future holds a");
+                return null;
+            }));
+        }).get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        for (var f : queued) {
+            f.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        }
+
         // The bodies above ran on this thread (every guard was free): none is held after them
         check(!Guard.has(a) && !Guard.has(b) && !Guard.has(c), "no guard is held after the bodies end");
 
