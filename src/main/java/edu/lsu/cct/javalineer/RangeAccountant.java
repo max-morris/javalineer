@@ -3,6 +3,11 @@ package edu.lsu.cct.javalineer;
 import java.util.*;
 import java.util.Set;
 
+/**
+ * The ranges of a PartitionableList held by partitioned calls: read ranges counted, write ranges each held once. An
+ * empty (or inverted) write range writes nothing, conflicts with nothing and is not recorded, so that two calls on an
+ * empty list (or parts with no writable cells) can hold their write ranges at once.
+ */
 public class RangeAccountant {
     private final Map<Range, Integer> readRanges = new HashMap<>();
     private final Set<Range> writeRanges = new HashSet<>();
@@ -18,15 +23,13 @@ public class RangeAccountant {
                 return ok;
             case WriteOnly:
                 if (ok = isWriteOk(startDesired, endDesired)) {
-                    var inserted = writeRanges.add(new Range(startDesired, endDesired));
-                    assert inserted;
+                    insertWrite(startDesired, endDesired);
                 }
                 return ok;
             case ReadWrite:
                 if (ok = isReadOk(startDesired - nGhosts, endDesired + nGhosts) && isWriteOk(startDesired, endDesired)) {
                     insertRead(new Range(startDesired - nGhosts, endDesired + nGhosts));
-                    var inserted = writeRanges.add(new Range(startDesired, endDesired));
-                    assert inserted;
+                    insertWrite(startDesired, endDesired);
                 }
                 return ok;
             default:
@@ -35,7 +38,6 @@ public class RangeAccountant {
     }
 
     public void release(PartIntentKind kind, int startDesired, int endDesired, int nGhosts) {
-        boolean removed;
         Range rr;
         switch (kind) {
             case ReadOnly:
@@ -44,16 +46,28 @@ public class RangeAccountant {
                 removeRead(rr);
                 break;
             case WriteOnly:
-                removed = writeRanges.remove(new Range(startDesired, endDesired));
-                assert removed;
+                removeWrite(startDesired, endDesired);
                 break;
             case ReadWrite:
                 rr = new Range(startDesired - nGhosts, endDesired + nGhosts);
                 assert readRanges.containsKey(rr);
                 removeRead(rr);
-                removed = writeRanges.remove(new Range(startDesired, endDesired));
-                assert removed;
+                removeWrite(startDesired, endDesired);
                 break;
+        }
+    }
+
+    private void insertWrite(int start, int end) {
+        if (start < end) {
+            var inserted = writeRanges.add(new Range(start, end));
+            assert inserted;
+        }
+    }
+
+    private void removeWrite(int start, int end) {
+        if (start < end) {
+            var removed = writeRanges.remove(new Range(start, end));
+            assert removed;
         }
     }
 
@@ -88,6 +102,9 @@ public class RangeAccountant {
     }
 
     private boolean isWriteOk(int startDesired, int endDesired) {
+        if (startDesired >= endDesired) {
+            return true;
+        }
         if (!isReadOk(startDesired, endDesired)) {
             return false;
         }

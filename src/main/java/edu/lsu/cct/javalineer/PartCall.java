@@ -24,7 +24,9 @@ import java.util.concurrent.atomic.AtomicReference;
  * holding some of its lists waits only for lists later in that order, so calls which overlap on several lists cannot
  * wait for each other in a cycle, which they could when every list was admitted independently. Every kind of call
  * (runPartitioned, runPartitionedFut, reducePartitioned) goes through this one admission, so they cannot deadlock
- * against each other either. A list appearing twice is admitted twice, in a row.
+ * against each other either. A list may appear more than once in a call only with read intents (each is admitted, in
+ * a row): with a write, the call's second admission would conflict with its own first one and wait forever, so the
+ * call is rejected with IllegalArgumentException.
  * <p>
  * A runPartitionedFut call ({@link #withPartFutures}) differs in one thing: a part is a body returning a future, and
  * the call's ranges are released when the last part's body returns, not when the parts' futures complete, so a part
@@ -50,6 +52,9 @@ final class PartCall {
     private int admitted = 0;
 
     private PartCall(int nParts, int nGhosts, PartitionableList<?>[] lists, PartIntentKind[] kinds, int[] lo, int[] hi) {
+        if (nParts < 0) {
+            throw new IllegalArgumentException("a partitioned call of " + nParts + " parts");
+        }
         this.lists = lists;
         this.kinds = kinds;
         this.lo = lo;
@@ -67,16 +72,23 @@ final class PartCall {
         for (int j = 0; j < lists.length; j++) {
             order[j] = boxed[j];
         }
+        for (int k = 1; k < order.length; k++) {
+            int a = order[k - 1], b = order[k];
+            if (lists[a] == lists[b] && (kinds[a] != PartIntentKind.ReadOnly || kinds[b] != PartIntentKind.ReadOnly)) {
+                throw new IllegalArgumentException("a list appears more than once in a partitioned call (arguments "
+                        + (Math.min(a, b) + 1) + " and " + (Math.max(a, b) + 1) + "), not only with read intents");
+            }
+        }
     }
 
     /**
      * A call of nChunks parts split by {@link PartitionableList#partIndex}: each list's parts cover
-     * [partIndex(0), partIndex(nChunks)) of that list.
+     * [partIndex(0), partIndex(nChunks)) of that list. With no parts the call takes nothing and is over at once.
      */
     static PartCall ofChunks(int nChunks, int nGhosts, PartitionableList<?>[] lists, PartIntentKind[] kinds) {
         var lo = new int[lists.length];
         var hi = new int[lists.length];
-        for (int j = 0; j < lists.length; j++) {
+        for (int j = 0; nChunks > 0 && j < lists.length; j++) {
             int size = lists[j].data.size();
             lo[j] = PartitionableList.partIndex(0, nChunks, size, nGhosts);
             hi[j] = PartitionableList.partIndex(nChunks, nChunks, size, nGhosts);
@@ -96,6 +108,9 @@ final class PartCall {
         for (int p = 0; p < nParts; p++) {
             begin = Math.min(begin, ranges.getWritableBegin(p));
             end = Math.max(end, ranges.getWritableEnd(p));
+        }
+        if (nParts <= 0) {
+            begin = end = 0;
         }
         var lo = new int[lists.length];
         var hi = new int[lists.length];
