@@ -47,6 +47,20 @@ public class ReadOnlyPartListView<E> extends PartListView<E> implements ReadView
         return getUnchecked(i);
     }
 
+    public double getDouble(int i) {
+        if (i < -ghostSize || i >= size + ghostSize) {
+            throw new IndexOutOfBoundsException(i);
+        }
+        return readDouble(offset + i);
+    }
+
+    public int getInt(int i) {
+        if (i < -ghostSize || i >= size + ghostSize) {
+            throw new IndexOutOfBoundsException(i);
+        }
+        return readInt(offset + i);
+    }
+
     @Override
     public int readableSize() {
         return size + 2*ghostSize;

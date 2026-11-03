@@ -62,6 +62,43 @@ public abstract class PartListView<E> implements View<E> {
                 offset, size, ghostSize, readable, writable));
     }
 
+    // The element at index k of the underlying list as a primitive: straight from the array when the list stores its
+    // elements so (DoubleList, IntList), else unboxed from the list's get. The views' getDouble, setDouble, getInt and
+    // setInt use these, so they work on any list, and never box on a primitive one.
+    @SuppressWarnings("unchecked")
+    protected final double readDouble(int k) {
+        if (underlying instanceof DoubleList) {
+            return ((DoubleList) underlying).data[k];
+        }
+        return ((List<Double>) underlying).get(k);
+    }
+
+    @SuppressWarnings("unchecked")
+    protected final void writeDouble(int k, double value) {
+        if (underlying instanceof DoubleList) {
+            ((DoubleList) underlying).data[k] = value;
+        } else {
+            ((List<Double>) underlying).set(k, value);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    protected final int readInt(int k) {
+        if (underlying instanceof IntList) {
+            return ((IntList) underlying).data[k];
+        }
+        return ((List<Integer>) underlying).get(k);
+    }
+
+    @SuppressWarnings("unchecked")
+    protected final void writeInt(int k, int value) {
+        if (underlying instanceof IntList) {
+            ((IntList) underlying).data[k] = value;
+        } else {
+            ((List<Integer>) underlying).set(k, value);
+        }
+    }
+
     public PartitionableList<E> getSource() {
         return source;
     }

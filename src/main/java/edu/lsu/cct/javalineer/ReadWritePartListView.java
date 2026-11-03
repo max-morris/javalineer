@@ -60,6 +60,34 @@ public class ReadWritePartListView<E> extends PartListView<E> implements ReadWri
         setUnchecked(i, e);
     }
 
+    public double getDouble(int i) {
+        if (i < -ghostSize || i >= size + ghostSize) {
+            throw new IndexOutOfBoundsException(i);
+        }
+        return readDouble(offset + i);
+    }
+
+    public int getInt(int i) {
+        if (i < -ghostSize || i >= size + ghostSize) {
+            throw new IndexOutOfBoundsException(i);
+        }
+        return readInt(offset + i);
+    }
+
+    public void setDouble(int i, double value) {
+        if (i < 0 || i >= size) {
+            throw new IndexOutOfBoundsException(i);
+        }
+        writeDouble(offset + i, value);
+    }
+
+    public void setInt(int i, int value) {
+        if (i < 0 || i >= size) {
+            throw new IndexOutOfBoundsException(i);
+        }
+        writeInt(offset + i, value);
+    }
+
     @Override
     public int readableSize() {
         return size + 2*ghostSize;

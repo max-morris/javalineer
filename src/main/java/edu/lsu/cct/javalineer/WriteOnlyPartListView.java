@@ -46,6 +46,20 @@ public class WriteOnlyPartListView<E> extends PartListView<E> implements WriteVi
         setUnchecked(i, e);
     }
 
+    public void setDouble(int i, double value) {
+        if (i < 0 || i >= size) {
+            throw new IndexOutOfBoundsException(i);
+        }
+        writeDouble(offset + i, value);
+    }
+
+    public void setInt(int i, int value) {
+        if (i < 0 || i >= size) {
+            throw new IndexOutOfBoundsException(i);
+        }
+        writeInt(offset + i, value);
+    }
+
     @Override
     public int readableSize() {
         return 0;

@@ -43,6 +43,36 @@ public final class PartitionableList<E> {
         return new PartitionableList<E>(size, fillFunction);
     }
 
+    /**
+     * A list of doubles stored in a double[] (DoubleList): the views' getDouble and setDouble read and write it without
+     * boxing, and get and set work on it as on any other list.
+     */
+    public static PartitionableList<Double> ofDouble(int size, IntFunction<Double> fillFunction) {
+        return new PartitionableList<>(new DoubleList(size, fillFunction));
+    }
+
+    /**
+     * A list of doubles stored in a double[], holding contents' elements.
+     */
+    public static PartitionableList<Double> ofDouble(List<Double> contents) {
+        return new PartitionableList<>(new DoubleList(contents));
+    }
+
+    /**
+     * A list of ints stored in an int[] (IntList): the views' getInt and setInt read and write it without boxing, and
+     * get and set work on it as on any other list.
+     */
+    public static PartitionableList<Integer> ofInt(int size, IntFunction<Integer> fillFunction) {
+        return new PartitionableList<>(new IntList(size, fillFunction));
+    }
+
+    /**
+     * A list of ints stored in an int[], holding contents' elements.
+     */
+    public static PartitionableList<Integer> ofInt(List<Integer> contents) {
+        return new PartitionableList<>(new IntList(contents));
+    }
+
     public static int partIndex(int part, int numParts, int size, int nGhosts) {
         int writableSize = size - 2 * nGhosts;
         int n = writableSize / numParts;
