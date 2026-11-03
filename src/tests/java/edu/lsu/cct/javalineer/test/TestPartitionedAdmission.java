@@ -32,11 +32,13 @@ public class TestPartitionedAdmission {
         }
     }
 
+    // Needs only one part running, so it passes under any pool size (with the per-part admission, every part's
+    // ranges were taken at the call, before any part ran, so one running part is enough to tell the two apart).
     static void oneRangePerCall() throws Exception {
         int nParts = 8;
         var a = PartitionableList.of(80, i -> i);
         var b = PartitionableList.of(80, i -> 0);
-        var running = new CountDownLatch(nParts);
+        var running = new CountDownLatch(1);
         var letIn = new CountDownLatch(1);
         var fut = new CompletableFuture<Void>();
         var t = new Thread(() -> PartitionableList.runPartitioned(nParts, a.read(), b.write(), (av, bv) -> {
@@ -52,8 +54,8 @@ public class TestPartitionedAdmission {
         }).whenComplete((v, e) -> fut.complete(null)));
         t.setDaemon(true);
         t.start();
-        check(running.await(TIMEOUT_SECONDS, TimeUnit.SECONDS), "every part runs at once");
-        // Every part is blocked inside the call, so the accountants are quiet: one range each
+        check(running.await(TIMEOUT_SECONDS, TimeUnit.SECONDS), "a part runs");
+        // The parts are blocked inside the call or queued, so the accountants are quiet: one range each
         check(TestPartitionedRelease.heldRanges(a) == 1, "a holds one range for the call, got "
                 + TestPartitionedRelease.heldRanges(a));
         check(TestPartitionedRelease.heldRanges(b) == 1, "b holds one range for the call, got "
