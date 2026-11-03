@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * The admission, parts and release of one runPartitioned or reducePartitioned call.
+ * The admission, parts and release of one runPartitioned, runPartitionedFut or reducePartitioned call.
  * <p>
  * The call takes one range per list, the union of its parts' ranges (for a list with nGhosts ghosts and parts covering
  * [lo, hi), the write range is [lo, hi) and the read range [lo - nGhosts, hi + nGhosts)), through one condition on
@@ -20,10 +20,17 @@ import java.util.concurrent.atomic.AtomicReference;
  * What this gives up: a part of a later call can no longer start as soon as the parts of an earlier call which it
  * overlaps are over; it waits for the whole earlier call. Mutual exclusion is unchanged (the union covers every part).
  * <p>
- * The lists are admitted one after another in the order of their RangeAccountants' guards (a list appearing twice is
- * admitted twice, in a row), never all at once: a call holding some of its lists waits only for lists later in that
- * order, so calls which overlap on several lists cannot wait for each other in a cycle, which they could when every
- * list was admitted independently.
+ * The lists are admitted one after another in the order of their RangeAccountants' guards, never all at once: a call
+ * holding some of its lists waits only for lists later in that order, so calls which overlap on several lists cannot
+ * wait for each other in a cycle, which they could when every list was admitted independently. Every kind of call
+ * (runPartitioned, runPartitionedFut, reducePartitioned) goes through this one admission, so they cannot deadlock
+ * against each other either. A list appearing twice is admitted twice, in a row.
+ * <p>
+ * A runPartitionedFut call ({@link #withPartFutures}) differs in one thing: a part is a body returning a future, and
+ * the call's ranges are released when the last part's body returns, not when the parts' futures complete, so a part
+ * may return the future of a call on a sub-range of the same list (MergeSort's recursion), which could not be
+ * admitted while the enclosing call held its range. A part's future must therefore not use the part's views after its
+ * body has returned. The call's future completes when the ranges are released and every part's future is complete.
  */
 final class PartCall {
     private final PartitionableList<?>[] lists;
@@ -31,7 +38,11 @@ final class PartCall {
     private final int[] lo, hi;
     private final int nGhosts;
     private final int nParts;
+    // The parts whose body has not returned yet: the last one to return releases the call's ranges
     private final AtomicInteger remaining;
+    // What the call's future waits for: the release, and in a runPartitionedFut call every part's future too
+    private final AtomicInteger unfinished = new AtomicInteger(1);
+    private boolean partFutures = false;
     private final AtomicReference<Throwable> failure = new AtomicReference<>();
     private final CompletableFuture<Void> done = new CompletableFuture<>();
     // The lists in admission order, and how many of them have been admitted (written only by the admission chain)
@@ -75,7 +86,8 @@ final class PartCall {
 
     /**
      * A call with the parts of ranges, the same in every list: the writable union is the smallest range containing
-     * every part's writable range.
+     * every part's writable range (their hull: for parts with gaps between them, the gaps are taken too, which
+     * excludes other calls on the gaps; coarser, never unsafe).
      */
     static PartCall ofRanges(PartitionRangeProvider ranges, int nGhosts, PartitionableList<?>[] lists,
                              PartIntentKind[] kinds) {
@@ -92,13 +104,24 @@ final class PartCall {
         return new PartCall(nParts, nGhosts, lists, kinds, lo, hi);
     }
 
+    /**
+     * Makes this a runPartitionedFut call: every part must also end with exactly one {@link #partFutureDone}, when the
+     * future its body returned completes, and the call's future waits for those too. Called before {@link #start}.
+     */
+    PartCall withPartFutures() {
+        partFutures = true;
+        unfinished.set(nParts + 1);
+        return this;
+    }
+
     int numParts() {
         return nParts;
     }
 
     /**
      * The call's future: it completes once every part has finished and every range of the call is released,
-     * exceptionally with the first failure if there was one.
+     * (in a runPartitionedFut call, and every part's future is complete), exceptionally with the first failure if
+     * there was one.
      */
     CompletableFuture<Void> future() {
         return done;
@@ -109,7 +132,8 @@ final class PartCall {
      * the pool, except the last, which runs on the thread that finished the admission when that is the calling
      * thread (the common case: no other call holds a conflicting range). When the admission waits, the thread that
      * finishes it is releasing another call's range inside that list's guard, so every part goes to the pool. Each
-     * part must end with exactly one {@link #partDone}. With no parts, the call is over at once and takes nothing.
+     * part must end with exactly one {@link #partDone} (and in a runPartitionedFut call one {@link #partFutureDone}).
+     * With no parts, the call is over at once and takes nothing.
      */
     void start(PartRunner parts) {
         if (nParts == 0) {
@@ -122,7 +146,7 @@ final class PartCall {
             if (t != null) {
                 // A condition failed (it threw): nothing ran, so give back what was admitted and fail.
                 failure.compareAndSet(null, t);
-                release();
+                release().whenComplete((v2, e) -> finish(e));
                 return;
             }
             for (int p = 0; p < nParts; p++) {
@@ -134,6 +158,9 @@ final class PartCall {
                         Pool.getPool().execute(() -> parts.run(partNum));
                     } catch (RejectedExecutionException e) {
                         partDone(e);
+                        if (partFutures) {
+                            partFutureDone(e);
+                        }
                     }
                 }
             }
@@ -162,8 +189,9 @@ final class PartCall {
     }
 
     /**
-     * A part is over, with t its failure or null. The last part releases the call's ranges and then completes the
-     * call's future.
+     * A part is over (in a runPartitionedFut call: its body has returned), with t its failure or null. The last part
+     * releases the call's ranges, and the call's future completes once they are released (and, in a
+     * runPartitionedFut call, every part's future is complete).
      */
     void partDone(Throwable t) {
         if (t != null) {
@@ -172,13 +200,42 @@ final class PartCall {
         int left = remaining.decrementAndGet();
         assert left >= 0 : "a part of a partitioned call finished twice";
         if (left == 0) {
-            release();
+            release().whenComplete((v, e) -> finishOne(e));
         }
     }
 
-    // Releases the admitted lists' ranges and then completes the future. Each release goes through the list's guard
-    // and may queue, so the future waits for all of them.
-    private void release() {
+    /** In a runPartitionedFut call, the future a part's body returned is complete, with t its failure or null. */
+    void partFutureDone(Throwable t) {
+        assert partFutures;
+        finishOne(t);
+    }
+
+    private void finishOne(Throwable t) {
+        if (t != null) {
+            failure.compareAndSet(null, t);
+        }
+        int left = unfinished.decrementAndGet();
+        assert left >= 0 : "a partitioned call finished twice";
+        if (left == 0) {
+            finish(null);
+        }
+    }
+
+    private void finish(Throwable t) {
+        if (t != null) {
+            failure.compareAndSet(null, t);
+        }
+        var first = failure.get();
+        if (first == null) {
+            done.complete(null);
+        } else {
+            done.completeExceptionally(first);
+        }
+    }
+
+    // Releases the admitted lists' ranges. Each release goes through the list's guard and may queue; the returned
+    // future completes when all of them have run.
+    private CompletableFuture<Void> release() {
         var releases = new CompletableFuture<?>[admitted];
         for (int k = 0; k < admitted; k++) {
             int j = order[k];
@@ -190,16 +247,6 @@ final class PartCall {
                 list.rangeAccountantCond.signalAll();
             });
         }
-        CompletableFuture.allOf(releases).whenComplete((v, e) -> {
-            if (e != null) {
-                failure.compareAndSet(null, e);
-            }
-            var t = failure.get();
-            if (t == null) {
-                done.complete(null);
-            } else {
-                done.completeExceptionally(t);
-            }
-        });
+        return CompletableFuture.allOf(releases);
     }
 }

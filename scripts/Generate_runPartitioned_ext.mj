@@ -74,117 +74,54 @@ final var view${j} = new ${rw.1}PartListView<>(data${j}, lo${j}, chunkSize${j}, 
     }).join("\n\n")
 }
 
-fn mkReadyInits(rwList: list<string>) -> string {
-    (for rw in rwList.enumerate() {
-            let j = rw.0 + 1;
-            push ##
-final var ready${j} = Guard.runCondition(list${j}.rangeAccountantCond, (rangeAccountantVar) -> {
-    return rangeAccountantVar.get().isRangeOk(PartIntentKind.${rw.1}, lo${j}, hi${j}, nGhosts);
-});
-        ##;
-    }).join("\n\n")
+fn mkCallInit(rwList: list<string>, factory: string) -> string {
+    let listArgs = ["list${i}" | i in [1..=rwList.len()]].join(", ");
+    let kindArgs = ["PartIntentKind.${rw}" | rw in rwList].join(", ");
+
+    ##
+final var call = PartCall.${factory}, nGhosts,
+                                    new PartitionableList<?>[] {${listArgs}},
+                                    new PartIntentKind[] {${kindArgs}}).withPartFutures();
+    ##.trim()
 }
 
-fn mkRangeRelease(rwList: list<string>) -> string {
-    (for rw in rwList.enumerate() {
-                let j = rw.0 + 1;
-                push ##
-list${j}.rangeAccountant.runGuarded((rangeAccountantVar) -> {
-    rangeAccountantVar.get().release(PartIntentKind.${rw.1}, lo${j}, hi${j}, nGhosts);
-    list${j}.rangeAccountantCond.signalAll();
+fn mkRunPartedFutBodyWith(rwList: list<string>, callInit: string, viewInits: string) -> string {
+    let viewList = ["view${i}" | i in [1..=rwList.len()]].join(", ");
+
+    ##
+
+// The call takes one range per list for all of its parts, admitted in guard order as runPartitioned's are
+// (PartCall.java). The last part whose body returns releases them, before the parts' futures complete; the
+// returned future completes when they are released and every part's future is complete.
+${mkListInits(rwList.len())}
+
+${callInit}
+
+call.start((partNum) -> {
+    CompletableFuture<Void> partFut;
+    try {
+        ${viewInits}
+
+        partFut = Pool.callCapturing(() -> chunkTask.apply(${viewList}));
+    } catch (Throwable e) {
+        Pool.reportTaskFailure(e);
+        partFut = CompletableFuture.failedFuture(e);
+    }
+    call.partDone(null);
+    partFut.whenComplete((v, e) -> call.partFutureDone(e));
 });
-        ##;
-    }).join("\n\n")
+
+return call.future();
+
+    ##.trim()
 }
 
 fn mkRunPartedFutBody(rwList: list<string>) -> string {
-    let readyList = ["ready${i}" | i in [1..=rwList.len()]].join(", ");
-    let viewList = ["view${i}" | i in [1..=rwList.len()]].join(", ");
-
-    ##
-
-final var done = new CompletableFuture<Void>();
-final var tasksDone = new CountdownLatch(nChunks);
-
-${mkListInits(rwList.len())}
-
-for (int i = 0; i < nChunks; i++) {
-    final var partNum = i;
-    ${mkViewInits(rwList)}
-    ${mkReadyInits(rwList)}
-
-    var ready = CompletableFuture.allOf(${readyList});
-
-    Runnable task = () -> {
-        Pool.callCapturing(() -> chunkTask.apply(${viewList})).whenComplete((res, e) -> {
-            if (e != null) {
-                done.completeExceptionally(e);
-            }
-            tasksDone.signal();
-        });
-
-        ${mkRangeRelease(rwList)}
-    };
-
-    if (partNum == nChunks - 1) {
-        ready.thenRun(task);
-    } else {
-        ready.thenRunAsync(task, Pool.getPool());
-    }
-}
-
-tasksDone.getFut().thenRun(() -> {
-    done.complete(null);
-});
-
-return done;
-
-    ##.trim()
+    mkRunPartedFutBodyWith(rwList, mkCallInit(rwList, "ofChunks(nChunks"), mkViewInits(rwList))
 }
 
 fn mkRunPartedFutBody2(rwList: list<string>) -> string {
-    let readyList = ["ready${i}" | i in [1..=rwList.len()]].join(", ");
-    let viewList = ["view${i}" | i in [1..=rwList.len()]].join(", ");
-
-    ##
-
-final var done = new CompletableFuture<Void>();
-final var tasksDone = new CountdownLatch(ranges.numPartitions());
-
-${mkListInits(rwList.len())}
-
-for (int i = 0; i < ranges.numPartitions(); i++) {
-    final var partNum = i;
-    ${mkViewInits2(rwList)}
-    ${mkReadyInits(rwList)}
-
-    var ready = CompletableFuture.allOf(${readyList});
-
-    Runnable task = () -> {
-        Pool.callCapturing(() -> chunkTask.apply(${viewList})).whenComplete((res, e) -> {
-            if (e != null) {
-                done.completeExceptionally(e);
-            }
-            tasksDone.signal();
-        });
-
-        ${mkRangeRelease(rwList)}
-    };
-
-    if (partNum == ranges.numPartitions() - 1) {
-        ready.thenRun(task);
-    } else {
-        ready.thenRunAsync(task, Pool.getPool());
-    }
-}
-
-tasksDone.getFut().thenRun(() -> {
-    done.complete(null);
-});
-
-return done;
-
-    ##.trim()
+    mkRunPartedFutBodyWith(rwList, mkCallInit(rwList, "ofRanges(ranges"), mkViewInits2(rwList))
 }
 
 fn emitRunParted(tpList: list<string>, rwList: list<string>) {
@@ -197,6 +134,11 @@ fn emitRunParted(tpList: list<string>, rwList: list<string>) {
 
     println(
         ##
+/**
+ * Runs chunkTask on nChunks parts of the lists, each returning a future. The call's ranges are released when the
+ * last part's body returns, not when the returned futures complete. A part's returned future must not read or write
+ * the part's views.
+ */
 public static <${tpList.join(', ')}> CompletableFuture<Void> runPartitionedFut(
     int nChunks,
     ${mkIntentArgs(rwList)},
@@ -225,6 +167,11 @@ ${access} static <${tpList.join(', ')}> CompletableFuture<Void> runPartitionedFu
 
     println(
         ##
+/**
+ * Runs chunkTask on the parts of ranges (the call takes the hull of their writable ranges), each returning a future.
+ * The call's ranges are released when the last part's body returns, not when the returned futures complete. A part's
+ * returned future must not read or write the part's views.
+ */
 public static <${tpList.join(', ')}> CompletableFuture<Void> runPartitionedFut(
     PartitionRangeProvider ranges,
     ${mkIntentArgs(rwList)},
