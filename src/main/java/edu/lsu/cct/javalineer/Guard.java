@@ -55,12 +55,18 @@ public class Guard implements Comparable<Guard> {
     }
 
     /**
-     * The tail of this guard's task queue (the last task enqueued), or null if no task was ever enqueued. An
-     * AtomicReference, a separate object, on purpose: every issuer writes the tail (getAndSet), and the guard
-     * object itself holds what the running task reads on every operation (locked, the cached one-guard set). As a
-     * volatile field of the guard, the tail puts that line under constant write traffic from the issuers, and each
-     * of those reads can become a coherence miss (with the tail here, contended single-guard and multi-guard
-     * acquisitions on 32 and 8 threads measured up to 12% and 50% faster than with it in the guard).
+     * The tail of this guard's task queue (the last task enqueued), or null if no task was ever enqueued. Every
+     * issuer writes it (getAndSet), so its cache line is under constant write traffic while the guard is contended.
+     * It is a separate object, but that does not keep it off the guard's line: the constructor allocates the guard,
+     * then locked, then this, contiguously, so the tail usually shares a cache line with the guard object (read on
+     * every operation: next, the cached one-guard set) and with locked (measured on a 64-bit JVM with compressed
+     * oops: locked at +32 and the tail at +48 of the guard, on the guard's or locked's line in about 98% of
+     * allocations; a GC copy can move them). That sharing is what made the contended single-guard arena slower
+     * than the paper era without GC (proof/notes/guards-slowdown-bisect.md, 6.10): the running task's two writes
+     * per task to locked are therefore kept only inside assertions. Padding the tail onto a line of its own also
+     * removes the sharing, at 136 bytes more per guard; it is not done here. (As an AtomicReference it measured
+     * faster than as a volatile field of the guard on contended single-guard and multi-guard acquisitions on 32 and
+     * 8 threads, up to 12% and 50%.)
      */
     final AtomicReference<GuardTask> next = new AtomicReference<>();
 
