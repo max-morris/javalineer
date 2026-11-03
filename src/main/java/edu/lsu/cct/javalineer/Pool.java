@@ -443,6 +443,15 @@ public class Pool {
         return Executors.newCachedThreadPool(getDefaultThreadFactory());
     }
 
+    /**
+     * A work-stealing pool of nThreads workers (a ForkJoinPool in async mode, so each worker takes its own tasks in
+     * submission order): a task submitted from a worker goes on that worker's own deque instead of one queue shared by
+     * every thread, and idle workers steal from the others. Its workers are daemon threads, as the other pools' are.
+     */
+    public static Executor newForkJoinPool(int nThreads) {
+        return new ForkJoinPool(nThreads, ForkJoinPool.defaultForkJoinWorkerThreadFactory, null, true);
+    }
+
     public static Executor initializePool() {
         String pool = Optional.ofNullable(System.getProperty("JAVALINEER_POOL", null))
                               .map(String::toLowerCase)
@@ -468,6 +477,8 @@ public class Pool {
                 return new DebugPool();
             case "dynamic":
                 return newDynamicPool();
+            case "forkjoin":
+                return newForkJoinPool(nThreads == null ? Runtime.getRuntime().availableProcessors() : nThreads);
             default:
                 throw new RuntimeException("Invalid JAVALINEER_POOL value: " + pool);
         }
