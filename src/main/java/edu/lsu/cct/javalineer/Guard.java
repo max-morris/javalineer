@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * <p>
  * Exceptions: every task given to {@code runGuarded} or {@code runCondition} runs through {@link Pool#runCapturing},
  * {@link CondTask#runCapturing} or, for a single-guard {@code runGuarded}, the same capture in its own task node
- * ({@link GuardTask}, which is the future returned), so a task which throws completes its future exceptionally
+ * ({@code GuardTask}, which is the future returned), so a task which throws completes its future exceptionally
  * instead of propagating the exception to whoever happened to run it (which, for an uncontended guard, is the caller
  * of {@code runGuarded}). The guards are released whether or not the task throws, and tasks queued behind it still
  * run. The failure is reported to the handler set by {@link Pool#setTaskFailureHandler}, if any. A conditional task
@@ -60,7 +60,7 @@ public class Guard implements Comparable<Guard> {
      *
      * @param r The task.
      * @return A future which completes when r returns, or completes exceptionally if r throws. It is the task's
-     *         queue node itself (see {@link GuardTask}), so no separate future is allocated.
+     *         queue node itself (a package-private {@code GuardTask}), so no separate future is allocated.
      */
     public CompletableFuture<Void> runGuarded(Runnable r) {
         return runGuarded_(self(), r);

@@ -14,8 +14,14 @@ import java.util.concurrent.RejectedExecutionException;
  * guard, guardsHeld and isDummyTask, never the future's state, so a caller who completes, cancels or obtrudes the
  * returned future changes only what the future reports, as with a separate future. Dummy tasks (the nodes of a
  * multi-guard acquisition) are never completed; the multi-guard path returns a future of its own.
+ * <p>
+ * Not public API: the class, its constructors, {@link #run()} and {@link #setRun(Runnable)} are package-private, so
+ * code outside this package sees a task only as the {@code CompletableFuture<Void>} that runGuarded returns. It
+ * cannot name the class, so it cannot cast the future back to a task and run it, or give it a new runnable: a
+ * task runs once, and only when the queue hands it its guard (runGuarded_, free_, handOff_). Only the future's
+ * own methods are reachable, and those affect only what the future reports (above).
  */
-public class GuardTask extends CompletableFuture<Void> {
+final class GuardTask extends CompletableFuture<Void> {
     /**
      * The link to the successor, accessed only through {@link #NEXT} with volatile semantics (compareAndSet,
      * getAndSet), exactly as the AtomicReference it replaces was: a field of the task itself rather than a
@@ -45,20 +51,20 @@ public class GuardTask extends CompletableFuture<Void> {
     private final boolean isDummyTask;
     private Runnable r;
 
-    public GuardTask(Guard g, GuardSet guardsHeld) {
+    GuardTask(Guard g, GuardSet guardsHeld) {
         this.guard = g;
         this.isDummyTask = true;
         this.guardsHeld = guardsHeld;
     }
 
-    public GuardTask(Guard g, Runnable r, GuardSet guardsHeld) {
+    GuardTask(Guard g, Runnable r, GuardSet guardsHeld) {
         this.guard = g;
         this.isDummyTask = false;
         this.r = r;
         this.guardsHeld = guardsHeld;
     }
 
-    public void setRun(Runnable r) {
+    void setRun(Runnable r) {
         assert this.r == null;
         this.r = r;
     }
@@ -114,7 +120,7 @@ public class GuardTask extends CompletableFuture<Void> {
         }
     }
 
-    public void run() {
+    void run() {
         run_();
         if (isUserTask())
             free_();
@@ -350,11 +356,11 @@ public class GuardTask extends CompletableFuture<Void> {
         return "gt[" + Integer.toHexString(System.identityHashCode(this)) + "," + guard + "," + next + "]";
     }
 
-    public boolean isUserTask() {
+    boolean isUserTask() {
         return !isDummyTask;
     }
 
-    public boolean isDummyTask() {
+    boolean isDummyTask() {
         return isDummyTask;
     }
 }
