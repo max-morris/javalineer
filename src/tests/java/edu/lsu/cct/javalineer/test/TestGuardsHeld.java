@@ -5,6 +5,7 @@ import edu.lsu.cct.javalineer.GuardVar;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -12,7 +13,8 @@ import java.util.concurrent.TimeUnit;
  * after a body nested inside another ends, the enclosing body's again. A nested acquisition of a free guard runs its
  * body inline, inside the enclosing body: before the fix, its guards stayed recorded as held when it ended, so the
  * enclosing body lost access to its own variables (Var.get's assertion failed), and once a body ended, its thread
- * went on reporting its guards as held.
+ * went on reporting its guards as held. runGuardedEtAl adds to the guards of the enclosing body, so outside a body it
+ * has nothing to add to and throws IllegalStateException.
  */
 public class TestGuardsHeld {
     static final long TIMEOUT_SECONDS = 30;
@@ -63,6 +65,29 @@ public class TestGuardsHeld {
 
         // The bodies above ran on this thread (every guard was free): none is held after them
         check(!Guard.has(a) && !Guard.has(b) && !Guard.has(c), "no guard is held after the bodies end");
+
+        // runGuardedEtAl inside a body acquires the body's guards together with its own: a is the enclosing body's,
+        // so the acquisition waits for that body to end and then holds a, b and c.
+        var etAl = new ArrayList<CompletableFuture<Void>>();
+        Guard.runGuarded(a, av -> {
+            etAl.add(Guard.runGuardedEtAl(b, c, (bv, cv) -> {
+                check(Guard.has(a) && Guard.has(b) && Guard.has(c), "runGuardedEtAl's body holds a, b and c");
+            }));
+        }).get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        etAl.get(0).get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+
+        // Outside any body (this thread has run bodies, so before the fix it kept a stale set; after it, null)
+        // runGuardedEtAl has nothing to add to: an IllegalStateException, not a NullPointerException.
+        Throwable outside = null;
+        try {
+            Guard.runGuardedEtAl(b, c, (bv, cv) -> {
+                check(false, "runGuardedEtAl outside a body ran its body");
+            });
+        } catch (Throwable t) {
+            outside = t;
+        }
+        check(outside instanceof IllegalStateException,
+              "runGuardedEtAl outside a body throws IllegalStateException (got " + outside + ")");
 
         if (!failures.isEmpty()) {
             throw new AssertionError("FAILED: " + failures);

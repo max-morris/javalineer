@@ -63,7 +63,7 @@ for i in range(2, 20):
     public static <{tlist}> void runGuardedEtAl(
 {decls.rstrip()}
             final GuardTask{i}<{tlist}> c) {{
-        var held = GuardTask.GUARDS_HELD.get();
+        var held = heldForEtAl();
         Guard.runGuarded(held.union(GuardSet.of({gvlist.rstrip()})), () -> c.run({runl}));
     }}
 """, file=fd)
