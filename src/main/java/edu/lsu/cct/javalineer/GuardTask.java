@@ -70,8 +70,8 @@ final class GuardTask extends CompletableFuture<Void> {
     }
 
     private void run_() {
-        var ok = guard.locked.compareAndSet(false, true);
-        assert ok : String.format("%s %d %d", this, ThreadID.get(), guardsHeld.size());
+        // Guard.locked is a diagnostic, kept only when assertions are enabled (see there).
+        assert guard.locked.compareAndSet(false, true) : String.format("%s %d %d", this, ThreadID.get(), guardsHeld.size());
         // The guards held by whatever this thread was running: a body this one is nested in, or none. Restored when
         // the body ends, so that an enclosing body goes on seeing its own guards, and a thread that runs no body sees
         // none.
@@ -144,8 +144,7 @@ final class GuardTask extends CompletableFuture<Void> {
      */
     private GuardTask release() {
         assert isDummyTask : "Calling GuardTask.release() on a user task.";
-        var ok = guard.locked.compareAndSet(true, false);
-        assert ok;
+        assert guard.locked.compareAndSet(true, false);
         return takeNext();
     }
 
@@ -313,8 +312,7 @@ final class GuardTask extends CompletableFuture<Void> {
             if (gt.isDummyTask()) {
                 return;
             }
-            var ok = gt.guard.locked.compareAndSet(true, false);
-            assert ok;
+            assert gt.guard.locked.compareAndSet(true, false);
             gt = gt.takeNext();
             if (gt == null) {
                 return;
@@ -337,8 +335,7 @@ final class GuardTask extends CompletableFuture<Void> {
      * its successor moves, and only when there is one.
      */
     private void free_() {
-        var ok = guard.locked.compareAndSet(true, false);
-        assert ok;
+        assert guard.locked.compareAndSet(true, false);
         GuardTask gt = takeNext();
         if (gt == null) {
             return;
@@ -352,8 +349,7 @@ final class GuardTask extends CompletableFuture<Void> {
             if (gt.isDummyTask()) {
                 return;
             }
-            ok = gt.guard.locked.compareAndSet(true, false);
-            assert ok;
+            assert gt.guard.locked.compareAndSet(true, false);
             gt = gt.takeNext();
         } while (gt != null);
     }

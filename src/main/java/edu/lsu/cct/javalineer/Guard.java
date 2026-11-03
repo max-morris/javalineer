@@ -22,6 +22,15 @@ import java.util.concurrent.atomic.AtomicReference;
 @SuppressWarnings("unused")
 public class Guard implements Comparable<Guard> {
     final static AtomicInteger nextId = new AtomicInteger(0);
+    /**
+     * Whether a task holds this guard: a diagnostic, for assertions and toString only. Nothing in the queue protocol
+     * reads it (mutual exclusion and the ordering between a task and its successor come from the queue's own
+     * atomic steps on the tail and on each task's next), so it is set and cleared only inside assert statements:
+     * with assertions enabled every acquisition still checks that the guard was free and every release that it was
+     * held; without, the two atomic read-modify-writes per task that maintained it are gone. They were the running
+     * task's only writes to a line that every issuer's getAndSet on the tail, allocated next to it, keeps taking
+     * away (see proof/notes/guards-slowdown-bisect.md, 6.10). Without assertions it stays false.
+     */
     final AtomicBoolean locked = new AtomicBoolean(false);
     final int id = nextId.getAndIncrement();
 
