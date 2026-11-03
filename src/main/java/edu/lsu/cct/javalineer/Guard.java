@@ -57,18 +57,13 @@ public class Guard implements Comparable<Guard> {
     /**
      * The tail of this guard's task queue (the last task enqueued), or null if no task was ever enqueued. Every
      * issuer writes it (getAndSet), so its cache line is under constant write traffic while the guard is contended.
-     * It is a separate object, but that does not keep it off the guard's line: the constructor allocates the guard,
-     * then locked, then this, contiguously, so the tail usually shares a cache line with the guard object (read on
-     * every operation: next, the cached one-guard set) and with locked (measured on a 64-bit JVM with compressed
-     * oops: locked at +32 and the tail at +48 of the guard, on the guard's or locked's line in about 98% of
-     * allocations; a GC copy can move them). That sharing is what made the contended single-guard arena slower
-     * than the paper era without GC (proof/notes/guards-slowdown-bisect.md, 6.10): the running task's two writes
-     * per task to locked are therefore kept only inside assertions. Padding the tail onto a line of its own also
-     * removes the sharing, at 136 bytes more per guard; it is not done here. (As an AtomicReference it measured
-     * faster than as a volatile field of the guard on contended single-guard and multi-guard acquisitions on 32 and
-     * 8 threads, up to 12% and 50%.)
+     * As a plain separate object it would not stay off the guard's line: the constructor allocates the guard, then
+     * locked, then the tail, contiguously, so a 16-byte AtomicReference usually shares a line with the guard object
+     * (read on every operation: next, the cached one-guard set) and with locked (measured: on the guard's or
+     * locked's line in about 98% of allocations; proof/notes/guards-slowdown-bisect.md, 6.10). It is therefore a
+     * GuardTail, padded so that no other object shares its value's line, at 152 bytes per guard instead of 16.
      */
-    final AtomicReference<GuardTask> next = new AtomicReference<>();
+    final GuardTail next = new GuardTail();
 
     /**
      * Runs r while holding this guard.
