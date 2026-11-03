@@ -28,8 +28,9 @@ public class Guard implements Comparable<Guard> {
      * atomic steps on the tail and on each task's next), so it is set and cleared only inside assert statements:
      * with assertions enabled every acquisition still checks that the guard was free and every release that it was
      * held; without, the two atomic read-modify-writes per task that maintained it are gone. They were the running
-     * task's only writes to a line that every issuer's getAndSet on the tail, allocated next to it, keeps taking
-     * away (see proof/notes/guards-slowdown-bisect.md, 6.10). Without assertions it stays false.
+     * task's only writes to the guard's line, which the issuers' getAndSet on the tail, allocated next to it, kept
+     * taking away until the tail was padded (see next, and proof/notes/guards-slowdown-bisect.md, 6.10). Without
+     * assertions it stays false.
      */
     final AtomicBoolean locked = new AtomicBoolean(false);
     final int id = nextId.getAndIncrement();
@@ -164,19 +165,20 @@ public class Guard implements Comparable<Guard> {
         // Set up the ultimate task: it holds every guard when it runs
         guardTasks.get(last).setRun(() -> {
             // As in GuardTask.run_, the guards held before the body are restored when it ends.
-            var outerHeld = GuardTask.GUARDS_HELD.get();
-            GuardTask.GUARDS_HELD.set(gs);
+            var tr = GuardTask.Trampoline.current();
+            var outerHeld = tr.held;
+            tr.held = gs;
             for (Guard g : gs)
                 assert g.locked.get();
 
             // Never throws, so the guards below are always released. Counted as a body, as run_ counts a user
             // task's, so that a single-guard acquisition nested in it defers its successors (GuardTask.free_).
-            var tr = GuardTask.Trampoline.enterBody();
+            tr.bodies++;
             try {
                 Pool.runCapturing(r, done);
             } finally {
                 tr.bodies--;
-                GuardTask.GUARDS_HELD.set(outerHeld);
+                tr.held = outerHeld;
             }
 
             GuardTask.releaseAll(guardTasks);

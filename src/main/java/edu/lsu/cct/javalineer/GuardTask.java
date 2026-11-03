@@ -43,7 +43,23 @@ final class GuardTask extends CompletableFuture<Void> {
     }, null);
 
 
-    final static ThreadLocal<GuardSet> GUARDS_HELD = new ThreadLocal<>();
+    /**
+     * The guards held by the body running on this thread, or null outside a body. Kept in the thread's
+     * {@link Trampoline}, not in a ThreadLocal of its own: a ThreadLocal's set writes its map entry, a small object
+     * that GC compaction may place on the same cache line as other threads' hot state, and every task sets it twice.
+     * The trampoline is padded (see there), and one lookup serves both.
+     */
+    static final class Held {
+        GuardSet get() {
+            return Trampoline.current().held;
+        }
+
+        void set(GuardSet gs) {
+            Trampoline.current().held = gs;
+        }
+    }
+
+    final static Held GUARDS_HELD = new Held();
 
     final Guard guard;
     final GuardSet guardsHeld;
@@ -77,8 +93,10 @@ final class GuardTask extends CompletableFuture<Void> {
         // none.
         GuardSet outerHeld = null;
         if (isUserTask()) {
-            outerHeld = GUARDS_HELD.get();
-            GUARDS_HELD.set(guardsHeld);
+            // One thread-local lookup for the held guards and the body count.
+            Trampoline tr = Trampoline.current();
+            outerHeld = tr.held;
+            tr.held = guardsHeld;
             for (Guard g : guardsHeld)
                 assert g.locked.get();
             // The task is its own future (as Pool.runCapturing does for a separate one): completed normally if r
@@ -86,7 +104,7 @@ final class GuardTask extends CompletableFuture<Void> {
             // escapes, and the future's dependents run here, on this thread, while the guard is still held.
             // The runnable and the completion (with the dependents it runs) are the body: counted, so that free_
             // knows when it runs inside one (as the separate future's completion was, inside the runnable).
-            Trampoline tr = Trampoline.enterBody();
+            tr.bodies++;
             try {
                 Throwable failure = null;
                 try {
@@ -112,7 +130,7 @@ final class GuardTask extends CompletableFuture<Void> {
                 tr.bodies--;
                 // After the completion, so that the future's dependents, which run inside it, still see the body's
                 // guards.
-                GUARDS_HELD.set(outerHeld);
+                tr.held = outerHeld;
             }
             return;
         }
@@ -214,29 +232,50 @@ final class GuardTask extends CompletableFuture<Void> {
      * inline, would not return while the convoy (or a self-perpetuating queue) behind the acquisition went on, and
      * that task's guards would stay held.
      */
-    static final class Trampoline {
-        private static final ThreadLocal<Trampoline> CURRENT = ThreadLocal.withInitial(Trampoline::new);
+    /**
+     * Padding before a {@link Trampoline}'s fields: an int (filling the gap after the object header, so that no
+     * subclass field can be placed there) and eight longs, 68 bytes. Superclass fields come first in the layout.
+     */
+    abstract static class TrampolinePad {
+        int pi;
+        long p0, p1, p2, p3, p4, p5, p6, p7;
+    }
 
+    /**
+     * A thread's guard state, written by that thread on every task it runs (bodies twice, held twice): between
+     * {@link TrampolinePad} and the longs of {@link Trampoline}, so that no other object shares a cache line with
+     * these fields, whatever a GC compaction puts next to the trampoline (other threads' trampolines, their
+     * thread-local maps). Without the padding a 40-byte trampoline next to another thread's state is false sharing
+     * between whichever threads hold guards in turn.
+     */
+    abstract static class TrampolineState extends TrampolinePad {
         /** The successor this loop is running, or null if no loop runs on this thread. */
-        private GuardTask running;
+        GuardTask running;
         /** The successor this loop runs next, or null. */
-        private GuardTask slot;
+        GuardTask slot;
         /**
          * The number of bodies running on this thread (nested acquisitions run their bodies inline inside their
          * caller's). Positive means that whatever runs now runs inside the body of a task that holds guards.
          */
         int bodies;
+        /** The guards held by the body running on this thread, or null (see {@link GuardTask#GUARDS_HELD}). */
+        GuardSet held;
+    }
+
+    static final class Trampoline extends TrampolineState {
+        private static final ThreadLocal<Trampoline> CURRENT = ThreadLocal.withInitial(Trampoline::new);
+
+        /** Padding after the fields (see {@link TrampolineState}). */
+        long q0, q1, q2, q3, q4, q5, q6, q7;
+
+        /** This thread's trampoline. */
+        static Trampoline current() {
+            return CURRENT.get();
+        }
 
         /** Whether this thread is running the body of a guarded task (see {@link GuardTask#free_()}). */
         static boolean inBody() {
             return CURRENT.get().bodies > 0;
-        }
-
-        /** Counts a body starting on this thread; the caller decrements bodies of the result when it ends. */
-        static Trampoline enterBody() {
-            Trampoline tr = CURRENT.get();
-            tr.bodies++;
-            return tr;
         }
 
         /**
