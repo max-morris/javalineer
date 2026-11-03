@@ -168,8 +168,7 @@ public class Guard implements Comparable<Guard> {
             var tr = GuardTask.Trampoline.current();
             var outerHeld = tr.held;
             tr.held = gs;
-            for (Guard g : gs)
-                assert g.locked.get();
+            GuardTask.assertLocked(gs);
 
             // Never throws, so the guards below are always released. Counted as a body, as run_ counts a user
             // task's, so that a single-guard acquisition nested in it defers its successors (GuardTask.free_).

@@ -85,6 +85,17 @@ final class GuardTask extends CompletableFuture<Void> {
         this.r = r;
     }
 
+    /**
+     * Asserts that every guard of {@code gs} is locked. Guard.locked is written only inside assertions in this class, so
+     * it must also be read under this class's assertion status: a read in another class could run with assertions
+     * enabled there and disabled here (per-class -ea flags), see the flag never set, and fail an acquisition that is
+     * in fact held.
+     */
+    static void assertLocked(GuardSet gs) {
+        for (Guard g : gs)
+            assert g.locked.get();
+    }
+
     private void run_() {
         // Guard.locked is a diagnostic, kept only when assertions are enabled (see there).
         assert guard.locked.compareAndSet(false, true) : String.format("%s %d %d", this, ThreadID.get(), guardsHeld.size());
@@ -97,8 +108,7 @@ final class GuardTask extends CompletableFuture<Void> {
             Trampoline tr = Trampoline.current();
             outerHeld = tr.held;
             tr.held = guardsHeld;
-            for (Guard g : guardsHeld)
-                assert g.locked.get();
+            assertLocked(guardsHeld);
             // The task is its own future (as Pool.runCapturing does for a separate one): completed normally if r
             // returns, exceptionally (after reporting to the failure handler) if r throws. Either way nothing
             // escapes, and the future's dependents run here, on this thread, while the guard is still held.
