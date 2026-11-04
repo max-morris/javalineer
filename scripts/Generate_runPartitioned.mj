@@ -52,8 +52,8 @@ fn mkViewInits2(rwList: list<string>) -> string {
         let j = rw.0 + 1;
         push ##
 final var data${j} = list${j}.data;
-final var lo${j} = ranges.getWritableBegin(partNum);
-final var hi${j} = ranges.getWritableEnd(partNum);
+final var lo${j} = call.partBegin(partNum);
+final var hi${j} = call.partEnd(partNum);
 final var chunkSize${j} = hi${j} - lo${j};
 final var view${j} = new ${rw.1}PartListView<>(data${j}, lo${j}, chunkSize${j}, nGhosts, partNum, list${j});
         ##;
