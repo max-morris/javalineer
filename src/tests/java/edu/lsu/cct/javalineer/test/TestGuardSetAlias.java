@@ -4,7 +4,9 @@ import edu.lsu.cct.javalineer.Guard;
 import edu.lsu.cct.javalineer.GuardSet;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -28,6 +30,89 @@ public class TestGuardSetAlias {
         if (!b) {
             failures.add(what);
         }
+    }
+
+    /** The set's guards, by get and by the iterator, which must agree; also checks the iterator's end and get's bounds. */
+    static List<Guard> contents(GuardSet s) {
+        var byGet = new ArrayList<Guard>();
+        for (int i = 0; i < s.size(); i++) {
+            byGet.add(s.get(i));
+        }
+        var byIter = new ArrayList<Guard>();
+        var it = s.iterator();
+        while (it.hasNext()) {
+            byIter.add(it.next());
+        }
+        check(byGet.equals(byIter), "get and the iterator agree on " + byGet);
+        boolean ended = false;
+        try {
+            it.next();
+        } catch (NoSuchElementException e) {
+            ended = true;
+        }
+        check(ended, "the iterator of " + byGet + " ends");
+        for (int idx : new int[] {-1, s.size()}) {
+            boolean thrown = false;
+            try {
+                s.get(idx);
+            } catch (IndexOutOfBoundsException e) {
+                thrown = true;
+            }
+            check(thrown, "get(" + idx + ") of " + byGet + " is out of bounds");
+        }
+        return byGet;
+    }
+
+    /**
+     * Sets of zero to five guards. Up to three are kept in fields and more in an array of the set's own, so each size
+     * is checked for its order, its independence from the caller's array, get, the iterator, contains, union, equals
+     * and hashCode; and a large array whose duplicates leave three or fewer guards.
+     */
+    static void checkEachSize(Guard a, Guard b, Guard c) {
+        var d = new Guard();
+        var e = new Guard();
+        var other = new Guard();
+        var all = List.of(a, b, c, d, e);
+
+        check(GuardSet.of().size() == 0 && GuardSet.of((Guard[]) null).size() == 0, "of() and of(null) are empty");
+        check(contents(GuardSet.of()).isEmpty(), "the empty set has no guards");
+        check(!GuardSet.of().contains(a), "the empty set contains nothing");
+
+        for (int n = 1; n <= 5; n++) {
+            var want = all.subList(0, n);
+            // Descending, so of sorts every size; then every element of the array is overwritten.
+            var arr = new Guard[n];
+            for (int i = 0; i < n; i++) {
+                arr[i] = want.get(n - 1 - i);
+            }
+            var s = GuardSet.of(arr);
+            Arrays.fill(arr, other);
+            check(s.size() == n && contents(s).equals(want), "of, size " + n + ", is " + want + " after its array changes");
+            for (var g : all) {
+                check(s.contains(g) == want.contains(g), "size " + n + " contains " + g + " iff it is one of " + want);
+            }
+            check(!s.contains(other), "size " + n + " does not contain a guard written to its array afterward");
+            var again = GuardSet.of(want.toArray(new Guard[0]));
+            check(s.equals(again) && s.hashCode() == again.hashCode(), "two sets of " + want + " are equal");
+            check(!s.equals(GuardSet.of(other)), "size " + n + " differs from a set of one other guard");
+
+            // Unions over every split of the size, the halves sharing one guard, across small and large sets.
+            for (int split = 0; split <= n; split++) {
+                var lo = GuardSet.of(want.subList(0, Math.min(n, split + 1)).toArray(new Guard[0]));
+                var hi = GuardSet.of(want.subList(split, n).toArray(new Guard[0]));
+                check(contents(lo.union(hi)).equals(want) && contents(hi.union(lo)).equals(want),
+                      "the union of " + contents(lo) + " and " + contents(hi) + " is " + want);
+            }
+        }
+
+        // A large array whose duplicates leave three guards, or one, gives a small set; the array is unchanged.
+        var dupArr = new Guard[] {c, a, b, a, c, b};
+        check(contents(GuardSet.of(dupArr)).equals(List.of(a, b, c)), "of(c, a, b, a, c, b) is [a, b, c]");
+        check(Arrays.equals(dupArr, new Guard[] {c, a, b, a, c, b}), "of(c, a, b, a, c, b) leaves its array alone");
+        check(contents(GuardSet.of(b, b, b, b)).equals(List.of(b)), "of(b, b, b, b) is [b]");
+        check(contents(GuardSet.of(b, b, b)).equals(List.of(b)), "of(b, b, b) is [b]");
+        check(contents(GuardSet.of(c, b, b)).equals(List.of(b, c)), "of(c, b, b) is [b, c]");
+        check(contents(GuardSet.of(b, c, b)).equals(List.of(b, c)), "of(b, c, b) is [b, c]");
     }
 
     public static void main(String[] args) throws Exception {
@@ -76,6 +161,8 @@ public class TestGuardSetAlias {
             check(s.size() == (hasC ? 3 : 2) && s.get(0) == a && s.get(1) == b && (!hasC || s.get(2) == c),
                   "of" + java.util.Arrays.toString(order) + " is sorted without duplicates");
         }
+
+        checkEachSize(a, b, c);
 
         // ofCached caches by the array's identity: after a write to the array it must give the set of the guards the
         // array holds now, not the one it held before.
