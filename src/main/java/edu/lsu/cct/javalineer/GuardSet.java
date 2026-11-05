@@ -22,47 +22,47 @@ public class GuardSet implements Iterable<Guard> {
         this(guards.length, guards);
     }
 
+    /**
+     * The set of guards, sorted, without duplicates. The set never shares the caller's array: it copies it first, so
+     * writing to the array afterward cannot reorder the set or change its guards (an acquisition takes its guards in
+     * the set's order, and a set reordered so could deadlock against an ordinary one), and removing a duplicate does
+     * not write into the caller's array. Sorting the copy, not the original, also means a thread writing to the
+     * array while this runs cannot leave the set unsorted.
+     */
     public static GuardSet of(Guard... guards) {
-        Guard[] sorted;
-
         if (guards == null || guards.length == 0) {
             return EMPTY;
-        } else if (guards.length == 1) {
-            return new GuardSet(guards);
+        }
+        return ofUnshared(guards.clone());
+    }
+
+    /**
+     * As {@link #of}, but the array becomes the set's own, sorted in place: only for an array no one else can reach,
+     * such as the varargs array the compiler makes at a call {@code ofUnshared(g1, g2)}. It saves the copy on the
+     * multi-guard acquisitions of GuardVars, which build a set on every call.
+     */
+    static GuardSet ofUnshared(Guard... guards) {
+        if (guards.length == 0) {
+            return EMPTY;
         } else if (guards.length == 2) {
-            if (guards[0].compareTo(guards[1]) <= 0) {
-                sorted = guards;
-            } else {
-                sorted = new Guard[] {guards[1], guards[0]};
+            if (guards[0].compareTo(guards[1]) > 0) {
+                swap(guards, 0, 1);
             }
         } else if (guards.length == 3) {
-            if (guards[0].compareTo(guards[1]) <= 0) {
-                if (guards[1].compareTo(guards[2]) <= 0) {
-                    sorted = guards;
-                } else {
-                    if (guards[0].compareTo(guards[2]) <= 0) {
-                        sorted = new Guard[] {guards[0], guards[2], guards[1]};
-                    } else {
-                        sorted = new Guard[] {guards[2], guards[0], guards[1]};
-                    }
-                }
-            } else {
-                if (guards[1].compareTo(guards[2]) <= 0) {
-                    if (guards[0].compareTo(guards[2]) <= 0) {
-                        sorted = new Guard[] {guards[1], guards[0], guards[2]};
-                    } else {
-                        sorted = new Guard[] {guards[1], guards[2], guards[0]};
-                    }
-                } else {
-                    sorted = new Guard[] {guards[2], guards[1], guards[0]};
+            if (guards[0].compareTo(guards[1]) > 0) {
+                swap(guards, 0, 1);
+            }
+            if (guards[1].compareTo(guards[2]) > 0) {
+                swap(guards, 1, 2);
+                if (guards[0].compareTo(guards[1]) > 0) {
+                    swap(guards, 0, 1);
                 }
             }
-        } else {
-            sorted = guards.clone();
-            Arrays.sort(sorted);
+        } else if (guards.length > 3) {
+            Arrays.sort(guards);
         }
 
-        return new GuardSet(moveDuplicatesToEnd(sorted), sorted);
+        return new GuardSet(moveDuplicatesToEnd(guards), guards);
     }
 
     public static GuardSet ofCached(Guard... guards) {

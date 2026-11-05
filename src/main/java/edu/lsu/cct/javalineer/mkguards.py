@@ -57,14 +57,14 @@ for i in range(2, 20):
     public static <{tlist}> void runGuarded(
 {decls.rstrip()}
             final GuardTask{i}<{tlist}> c) {{
-        Guard.runGuarded(GuardSet.of({gvlist.rstrip()}), () -> c.run({runl}));
+        Guard.runGuarded(GuardSet.ofUnshared({gvlist.rstrip()}), () -> c.run({runl}));
     }}
 
     public static <{tlist}> void runGuardedEtAl(
 {decls.rstrip()}
             final GuardTask{i}<{tlist}> c) {{
         var held = heldForEtAl();
-        Guard.runGuarded(held.union(GuardSet.of({gvlist.rstrip()})), () -> c.run({runl}));
+        Guard.runGuarded(held.union(GuardSet.ofUnshared({gvlist.rstrip()})), () -> c.run({runl}));
     }}
 """, file=fd)
 
