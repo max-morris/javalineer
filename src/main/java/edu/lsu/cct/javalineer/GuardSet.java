@@ -104,6 +104,8 @@ public class GuardSet implements Iterable<Guard> {
     }
 
     private static GuardSet of1(Guard a) {
+        // The two- and three-guard forms fail on a null at once through compareTo; so does this one.
+        java.util.Objects.requireNonNull(a, "guard");
         return new GuardSet(1, a, null, null);
     }
 
