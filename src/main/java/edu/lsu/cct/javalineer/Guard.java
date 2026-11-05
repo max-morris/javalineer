@@ -5,7 +5,7 @@ import edu.lsu.cct.javalineer.functionalinterfaces.*;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -21,7 +21,14 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 @SuppressWarnings("unused")
 public class Guard implements Comparable<Guard> {
-    final static AtomicInteger nextId = new AtomicInteger(0);
+    /**
+     * The next guard's id. Guards are acquired in ascending id order, and deadlock freedom rests on that order being
+     * total, so ids must never repeat and the comparison must never wrap. With 64 bits the counter would take
+     * nearly 300 years to wrap at a billion guards a second; a 32-bit counter wrapped after 2^32 guards, and its
+     * comparison by subtraction stopped being transitive once two live guards' ids were 2^31 apart (36 minutes at a
+     * million guards a second, with one guard made at startup still alive).
+     */
+    final static AtomicLong nextId = new AtomicLong(0);
     /**
      * Whether a task holds this guard: a diagnostic, for assertions and toString only. Nothing in the queue protocol
      * reads it (mutual exclusion and the ordering between a task and its successor come from the queue's own
@@ -33,14 +40,14 @@ public class Guard implements Comparable<Guard> {
      * assertions it stays false.
      */
     final AtomicBoolean locked = new AtomicBoolean(false);
-    final int id = nextId.getAndIncrement();
+    final long id = nextId.getAndIncrement();
 
     public String toString() {
         return "g[" + id + "," + (locked.get() ? "T" : "F") + "]";
     }
 
     public int compareTo(Guard g) {
-        return this.id - g.id;
+        return Long.compare(this.id, g.id);
     }
 
     @Override
@@ -52,7 +59,7 @@ public class Guard implements Comparable<Guard> {
 
     @Override
     public int hashCode() {
-        return Objects.hash(id);
+        return Long.hashCode(id);
     }
 
     /**
@@ -266,7 +273,7 @@ public class Guard implements Comparable<Guard> {
         return gs;
     }
 
-    public int getId() {
+    public long getId() {
         return id;
     }
 
