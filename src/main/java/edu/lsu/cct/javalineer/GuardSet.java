@@ -65,24 +65,59 @@ public class GuardSet implements Iterable<Guard> {
         return new GuardSet(moveDuplicatesToEnd(guards), guards);
     }
 
+    /**
+     * As {@link #of}, through a per-thread cache keyed by the array itself (by identity), for a caller which passes
+     * the same array again and again. A hit is checked against the array's contents when the set was made: if the
+     * caller has written to the array since, the set is made again, so the result is always the set of the guards
+     * the array holds now, never those it held before (a stale set would run a body without a guard it names).
+     */
     public static GuardSet ofCached(Guard... guards) {
+        if (guards == null || guards.length == 0) {
+            return EMPTY;
+        }
         var cache = CACHE.get();
 
         var ref = cache.get(guards);
         if (ref != null) {
             var cached = ref.get();
-            if (cached != null) {
-                return cached;
+            if (cached != null && cached.madeFrom(guards)) {
+                return cached.set;
             }
         }
 
-        var gSet = GuardSet.of(guards);
-        cache.put(guards, new SoftReference<>(gSet));
+        // The set is made from the copy, so that the contents checked on a hit are exactly those the set holds even
+        // if another thread writes to the array meanwhile.
+        var contents = guards.clone();
+        var entry = new Cached(contents, ofUnshared(contents.clone()));
+        cache.put(guards, new SoftReference<>(entry));
 
-        return gSet;
+        return entry.set;
     }
 
-    private static final ThreadLocal<HashMap<Guard[], SoftReference<GuardSet>>> CACHE =
+    /** A cached set and the contents of the array it was made from. */
+    private static final class Cached {
+        final Guard[] contents;
+        final GuardSet set;
+
+        Cached(Guard[] contents, GuardSet set) {
+            this.contents = contents;
+            this.set = set;
+        }
+
+        boolean madeFrom(Guard[] guards) {
+            if (guards.length != contents.length) {
+                return false;
+            }
+            for (int i = 0; i < guards.length; i++) {
+                if (guards[i] != contents[i]) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+
+    private static final ThreadLocal<HashMap<Guard[], SoftReference<Cached>>> CACHE =
             ThreadLocal.withInitial(HashMap::new);
     private static final GuardSet EMPTY = new GuardSet();
 

@@ -77,6 +77,16 @@ public class TestGuardSetAlias {
                   "of" + java.util.Arrays.toString(order) + " is sorted without duplicates");
         }
 
+        // ofCached caches by the array's identity: after a write to the array it must give the set of the guards the
+        // array holds now, not the one it held before.
+        var cachedArr = new Guard[] {a, b};
+        var c1 = GuardSet.ofCached(cachedArr);
+        check(GuardSet.ofCached(cachedArr) == c1, "ofCached hits for the same array, unchanged");
+        cachedArr[1] = c;
+        var c2 = GuardSet.ofCached(cachedArr);
+        check(c2.size() == 2 && c2.get(0) == a && c2.get(1) == c, "ofCached after a write to its array holds a and c");
+        check(c1.get(0) == a && c1.get(1) == b, "the earlier cached set is unchanged");
+
         // The deadlock. This thread holds a and then b (inline: both are free). Inside, a set made from a sorted
         // array which is then reversed is queued on its first guard, and an ordinary acquisition of the same two
         // guards on a. Releasing b hands it to the reversed set, which then waits for a behind the ordinary one;
