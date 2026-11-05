@@ -182,6 +182,13 @@ final class GuardTask extends CompletableFuture<Void> {
      * DONE) and the enqueuer must run succ itself.
      */
     boolean link(GuardTask succ) {
+        // DONE is final: once released, next never changes again, so a read that sees it is the CAS's failure
+        // without the atomic step (an uncontended acquisition finds its predecessor released). The read
+        // synchronizes with the release's CAS from null to DONE, as the failed CAS would. A release which found a
+        // successor also writes DONE, but then no enqueuer is left to call link on this task.
+        if (next == DONE) {
+            return false;
+        }
         return NEXT.compareAndSet(this, null, succ);
     }
 
