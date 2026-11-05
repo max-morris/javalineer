@@ -80,6 +80,10 @@ Guard.runCondition(bothNonZero, (v1, v2) -> {
 bothNonZero.signal(); // Re-run one pending task.
 bothNonZero.signalAll(); // Re-run all pending tasks.
 ```
+A signal re-runs the pending tasks in a body of its own on the condition's guards, so it sees every write made before
+that body runs: a write which happened before the call to `signal`, or a guarded write issued just before it whose
+lowest guard is one of the condition's, as in `gv1.runGuarded(v -> v.set(1)); bothNonZero.signal();`. A signal
+issued inside a body holding the condition's guards runs after that body.
 
 
 ## Exceptions in Tasks

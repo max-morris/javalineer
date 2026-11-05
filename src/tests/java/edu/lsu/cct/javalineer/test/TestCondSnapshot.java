@@ -12,11 +12,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * A signal or signalAll must act on the waiter list as it was at the signal: its iteration (under the
- * condition's guards) must never share a list with the appends of conditions which start waiting meanwhile (under
- * the waiter list's own guard). Like TestCondContextRace, but every predicate check is slow, so each signalAll
- * iterates for milliseconds while new waiters are appended. A shared list makes the iteration fail with a
- * ConcurrentModificationException (reported to the task failure handler) or skip a waiter.
+ * A signalAll's walk of the waiter list must never race the appends of conditions which start waiting meanwhile.
+ * Like TestCondContextRace, but every predicate check is slow, so each signalAll iterates for milliseconds while new
+ * waiters are issued. Written when the list had a guard of its own and a signal walked a snapshot of it: a walk
+ * sharing the live list failed with a ConcurrentModificationException (reported to the task failure handler) or
+ * skipped a waiter. The list is now walked and appended to only under the condition's guards, so the appends queue
+ * behind the walk; the test still checks that no walk fails and no waiter is lost.
  */
 public class TestCondSnapshot {
     static final int THREADS = 4;

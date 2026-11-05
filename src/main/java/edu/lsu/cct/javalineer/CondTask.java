@@ -3,6 +3,8 @@ package edu.lsu.cct.javalineer;
 import java.util.concurrent.CompletableFuture;
 
 public abstract class CondTask implements Runnable {
+    // Written and read by the condition only under its guards, whose handoff would be enough there; volatile because
+    // isDone() is public and may be called from any thread.
     protected volatile boolean done = false;
     protected final CompletableFuture<Void> fut = new CompletableFuture<>();
 
