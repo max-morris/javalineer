@@ -188,18 +188,32 @@ final class GuardTask extends CompletableFuture<Void> {
     /**
      * The release's step on next, after the guard is cleared: sets next to DONE and returns what it held. If that
      * was null, there was no successor, and an enqueuer which later finds this task as its predecessor fails its
-     * CAS from null and runs its own task (as with a CAS of next from null to DONE). Otherwise a successor had
-     * linked itself behind this task, and this thread alone must now run it (or hand it on). That successor's
-     * enqueuer was the only one ever given this task as its predecessor, and it has finished with next, so no one
-     * reads next again: overwriting it with DONE, instead of leaving the successor there as a failed CAS would, is
-     * invisible to the queue. It drops the link, so that a caller keeping this task's future does not keep alive
-     * every task queued on the guard after it.
+     * CAS from null and runs its own task. Otherwise a successor had linked itself behind this task, and this thread
+     * alone must now run it (or hand it on).
+     * <p>
+     * The step is a read first, and an atomic step only when the read finds no successor. A successor, once linked,
+     * is there for good: the only enqueuer ever given this task as its predecessor has finished with next, and only
+     * this release writes next after it. So a read that finds one has the same effect as the getAndSet(DONE) it
+     * replaces, and the happens-before from the enqueuer comes from the read (a volatile read of the value its CAS
+     * wrote). When the read finds null, a CAS from null to DONE decides the race with an enqueuer, as the getAndSet
+     * did; if it fails, the enqueuer's CAS won and its node is the successor. Overwriting a found successor with DONE
+     * is invisible to the queue, since no one reads next again; it drops the link, so that a caller keeping this
+     * task's future does not keep alive every task queued on the guard after it. That write is a release store, not
+     * an atomic step: with a backlog behind the guard, the drainer's release of each task needs no atomic
+     * read-modify-write (the completion of the task's future is its only one).
      *
      * @return The successor, or null if there is none.
      */
     private GuardTask takeNext() {
-        GuardTask succ = (GuardTask) NEXT.getAndSet(this, DONE);
+        GuardTask succ = next;
+        if (succ == null) {
+            if (NEXT.compareAndSet(this, null, DONE)) {
+                return null;
+            }
+            succ = next;
+        }
         assert succ != DONE : "A task was released twice.";
+        NEXT.setRelease(this, DONE);
         return succ;
     }
 
