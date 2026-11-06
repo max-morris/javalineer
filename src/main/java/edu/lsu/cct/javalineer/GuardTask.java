@@ -270,6 +270,11 @@ final class GuardTask extends CompletableFuture<Void> {
         int bodies;
         /** The guards held by the body running on this thread, or null (see {@link GuardTask#GUARDS_HELD}). */
         GuardSet held;
+        /**
+         * How many fresh stacks this trampoline is lent to ({@link Trampoline#lend}): positive only while a call made
+         * by {@link Guard#callOnFreshStack} runs, and then only the innermost such call's stack can touch it.
+         */
+        int lent;
     }
 
     static final class Trampoline extends TrampolineState {
@@ -281,6 +286,33 @@ final class GuardTask extends CompletableFuture<Void> {
         /** This thread's trampoline. */
         static Trampoline current() {
             return CURRENT.get();
+        }
+
+        /**
+         * Makes tr, the trampoline of a thread now waiting in {@link Guard#callOnFreshStack}, this thread's for the
+         * call (see {@link FreshStack}): this thread is a fresh stack's helper, between calls, with no trampoline of
+         * its own in use. The object itself is lent, not a copy, so everything the call does to it (a body's held
+         * guards, the count of bodies, a successor offered to the slot) is there for the caller when the call
+         * returns, exactly as if the call had run on the caller's own stack.
+         */
+        static void lend(Trampoline tr) {
+            CURRENT.set(tr);
+            tr.lent++;
+        }
+
+        /** Ends {@link #lend}: the helper no longer has tr, which goes back to its waiting owner. */
+        static void giveBack(Trampoline tr) {
+            assert CURRENT.get() == tr : "a fresh stack's trampoline was replaced during the call";
+            tr.lent--;
+            CURRENT.remove();
+        }
+
+        /**
+         * Whether this thread is running a call on a fresh stack (see {@link Pool#join}). Here rather than in
+         * {@link FreshStack}, so that a check needn't initialize that class (and read its stack size setting).
+         */
+        static boolean onFreshStack() {
+            return CURRENT.get().lent > 0;
         }
 
         /** Whether this thread is running the body of a guarded task (see {@link GuardTask#free_()}). */

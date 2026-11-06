@@ -141,3 +141,19 @@ Tracking is slow and meant for debugging. `-DJAVALINEER_DEADLOCK_CHECK=false` tu
 The pool returned by `Pool.getPool()` wraps the executor given to `Pool.setPool` (or chosen by `JAVALINEER_POOL`) to
 count the tasks queued or running; give tasks to `Pool.getPool()`, not to the underlying executor, so they are
 counted.
+
+## Deep Synchronous Calls: `Guard.callOnFreshStack`
+A chain of calls each of which completes inside the one below (a recursion through free guards, whose bodies run
+inline, or a compiler's chain of synchronous calls) can overflow the thread's stack. `Guard.callOnFreshStack(call)`
+runs `call` on a fresh stack, another thread's, while this thread waits, and returns what it returns or throws what
+it throws, the same object. To Javalineer it is a plain call: the thread's guard state is lent for its length, so
+`Guard.has`, nested acquisitions and the hand-off of released guards behave exactly as on this thread, and nothing
+else runs on this thread meanwhile. A caller counting its depth takes one past some bound and gets
+`Guard.freshStackSize()` bytes to go on with (`JAVALINEER_FRESH_STACK_SIZE`, 256 MB by default; only touched
+pages use memory). The fresh stacks are helper threads kept for reuse, so a handoff costs a few microseconds.
+
+`callOnFreshStack(call, enter, exit)` also runs `enter` before `call` and `exit` after it, on the fresh stack, for the
+caller's own thread-local state. If no thread can be started for the call, it throws `OutOfMemoryError` and `call`
+does not run. The call must never wait: it holds the caller's thread, and anything held by that thread's identity (a
+monitor, a lock, a class being initialized) is not lent. `Pool.join` on a fresh stack throws `IllegalStateException`
+rather than wait.

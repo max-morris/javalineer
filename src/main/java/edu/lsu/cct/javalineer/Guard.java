@@ -7,6 +7,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 /**
  * A guard: mutual exclusion with an implicit task queue.
@@ -258,6 +259,77 @@ public class Guard implements Comparable<Guard> {
             return false;
         }
         return guards.stream().allMatch(Guard::has);
+    }
+
+    /**
+     * Calls {@code call} on a fresh stack and returns what it returns, as a plain call would, with no hooks. See
+     * {@link #callOnFreshStack(Supplier, Runnable, Runnable)}.
+     */
+    public static <T> T callOnFreshStack(Supplier<T> call) {
+        return FreshStack.call(call, null, null);
+    }
+
+    /**
+     * Calls {@code call} on a fresh stack, another thread's, while this thread waits for it, and returns what it
+     * returns, or throws what it throws. To {@code call}, and to every guard operation it makes, this is a plain
+     * call: it runs with this thread's guard state, the object itself lent for the call, so {@link #has}, a nested
+     * acquisition (which runs inline if its guards are free and queues if one is held below it), and the release of
+     * a guard (whose successor goes where it would have gone from here) all behave as they would on this thread's own
+     * stack, and whatever the call left in that state is this thread's when it returns. Nothing else runs on this
+     * thread meanwhile. Its use is a deep chain of calls, each completing inside the one below, which would overflow
+     * one stack: past some depth the caller makes the next call through this, and the chain goes on with a whole
+     * stack ({@link #freshStackSize()}) to spare.
+     * <p>
+     * <b>Order and memory.</b> Everything this thread did before the call happens before the call, and everything the
+     * call did happens before this method returns, as with a thread's start and join. The handoff is a volatile write
+     * and read each way.
+     * <p>
+     * <b>Failure.</b> A {@link Throwable} that {@code call} throws, an {@link Error} or {@link StackOverflowError}
+     * included, is rethrown here as the same object, unwrapped and unreported (a plain call reports nothing either:
+     * Javalineer's task failure handler hears of it if it escapes a task's body, as from an inline call). If no fresh
+     * stack can be started (the JVM or the OS refuses a thread), {@code call} does not run, the guard state is
+     * untouched, and an {@link OutOfMemoryError} saying so is thrown, with the refusal as its cause: never a fallback
+     * to running {@code call} on this stack, which would lose the guarantee without a sign.
+     * <p>
+     * <b>Hooks</b>, for the caller's own thread-local state, which Javalineer can't know: {@code enter} runs on the
+     * fresh stack after the guard state is installed and before {@code call}, and {@code exit} runs there after
+     * {@code call} returns or throws, before the guard state is removed. Either may be null. If {@code enter} throws,
+     * neither {@code call} nor {@code exit} runs, and its throwable is rethrown here. If {@code exit} throws, its
+     * throwable is rethrown here, or, if {@code call} threw, added to that one as suppressed. Typically the caller
+     * captures its thread-local objects before the call, {@code enter} sets them on the fresh stack's thread, and
+     * {@code exit} removes them there: lend, as Javalineer does its own.
+     * <p>
+     * <b>Also lent:</b> the context class loader, and the interrupt status (set on the fresh stack if this thread's
+     * was set; set here on return if the call left it set). An interrupt of this thread while it waits is remembered
+     * and set again on return, as {@link Thread#join} would leave it to a plain call's caller. <b>Not lent:</b> the
+     * thread's identity ({@link Thread#currentThread()}, its name, its other thread-locals), monitors and locks it
+     * holds, and a class initialization it is in the middle of.
+     * <p>
+     * <b>Premise: {@code call} never waits</b>, neither for pool work nor for this thread. It holds this thread for its
+     * whole length, as a plain call would, so waiting on pool work is no less safe than from the caller itself (and,
+     * like that, deadlocks if the caller is the pool's only free worker). Waiting for something this thread holds by
+     * its identity (a monitor or lock it holds, a class it is initializing) deadlocks here though it wouldn't inline.
+     * {@link Pool#join} on a fresh stack, when it would wait, throws {@link IllegalStateException}; nothing else is
+     * detected.
+     *
+     * @param call  The call. Not null.
+     * @param enter Run on the fresh stack before {@code call}, or null.
+     * @param exit  Run on the fresh stack after {@code call}, or null.
+     * @return What {@code call} returned.
+     */
+    public static <T> T callOnFreshStack(Supplier<T> call, Runnable enter, Runnable exit) {
+        return FreshStack.call(call, enter, exit);
+    }
+
+    /**
+     * The size of the stack each {@link #callOnFreshStack} call gets, in bytes, as requested of the JVM:
+     * JAVALINEER_FRESH_STACK_SIZE, 256 MB by default (bytes, or with a suffix k, m or g). A caller counting its
+     * depth to decide when to take a fresh stack can scale its bound on one by this against its own stack's size.
+     *
+     * @return The size, in bytes.
+     */
+    public static long freshStackSize() {
+        return FreshStack.SIZE;
     }
 
     /*

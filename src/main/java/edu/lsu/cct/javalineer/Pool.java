@@ -268,12 +268,21 @@ public class Pool {
      * {@link CompletionException} is thrown if it failed. Like {@code join()}, the wait is not interruptible; an
      * interrupt is remembered and the thread's interrupt status is set again on return. Setting the system property
      * JAVALINEER_DEADLOCK_CHECK=false makes this exactly {@code fut.join()}.
+     * <p>
+     * Called on a fresh stack ({@link Guard#callOnFreshStack}) while fut is incomplete, this throws
+     * {@link IllegalStateException} instead of waiting: that call's premise is that it never waits.
      *
      * @param fut The future to wait for.
      * @return The value of fut.
      * @throws DeadlockException if the pool is idle while fut is incomplete.
+     * @throws IllegalStateException if this would wait on a fresh stack.
      */
     public static <T> T join(CompletableFuture<T> fut) {
+        if (!fut.isDone() && GuardTask.Trampoline.onFreshStack()) {
+            throw new IllegalStateException("Pool.join would wait on a fresh stack (Guard.callOnFreshStack), whose "
+                                            + "caller holds its thread meanwhile: a call on a fresh stack must never "
+                                            + "wait");
+        }
         if (deadlockCheck && !fut.isDone()) {
             awaitDoneOrIdle(fut);
             if (!fut.isDone()) {
