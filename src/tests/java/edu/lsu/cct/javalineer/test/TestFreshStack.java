@@ -5,6 +5,8 @@ import edu.lsu.cct.javalineer.Guard;
 import edu.lsu.cct.javalineer.GuardVar;
 import edu.lsu.cct.javalineer.Pool;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -109,8 +111,42 @@ public class TestFreshStack {
         System.out.println(name + ": " + n + " levels, " + handoffs.get() + " handoffs");
     }
 
+    /**
+     * Each helper reserves its whole stack as address space (256 MB by default), and threads may reserve a malloc
+     * arena besides. The deep cases nest up to 34 helpers, and the transfers hold up to three per running pool task
+     * (dozens under the dynamic pool). Under a finite address-space limit (ulimit -v) leaving less than 64 GB, those
+     * parts are skipped, and said to be: a call past the limit would fail, loudly, with OutOfMemoryError, which is
+     * the documented behavior and not what they test. Shrinking the stacks doesn't help, since smaller stacks nest
+     * more helpers. Returns why they are skipped, or null to run them.
+     */
+    static String tooLittleAddressSpace() {
+        long limit = -1, used = -1;
+        try {
+            for (String line : Files.readAllLines(Path.of("/proc/self/limits"))) {
+                if (line.startsWith("Max address space")) {
+                    String soft = line.split("\\s{2,}")[1];
+                    if (!soft.equals("unlimited")) {
+                        limit = Long.parseLong(soft);
+                    }
+                }
+            }
+            for (String line : Files.readAllLines(Path.of("/proc/self/status"))) {
+                if (line.startsWith("VmSize:")) {
+                    used = Long.parseLong(line.replaceAll("\\D", "")) * 1024;
+                }
+            }
+        } catch (Exception e) {
+            return null; // Not Linux, or not readable: run everything.
+        }
+        if (limit < 0 || used < 0 || limit - used >= 64L << 30) {
+            return null;
+        }
+        return "address space limited to " + (limit >> 20) + " MB with " + (used >> 20) + " MB in use";
+    }
+
     public static void main(String[] args) throws Exception {
         Test.requireAssert();
+        String cramped = tooLittleAddressSpace();
         var reports = new AtomicInteger();
         Pool.setTaskFailureHandler(t -> reports.incrementAndGet());
 
@@ -242,6 +278,11 @@ public class TestFreshStack {
             });
         })).get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
+        // A call that breaks the guard state: the assertion is reported, with the call's own throwable kept, and
+        // the trampoline still goes back.
+        String broken = FreshStackProbe.brokenStateIsReported();
+        check(broken == null, "a call that breaks the guard state: " + broken);
+
         // The trampoline's slot.
         String slot = FreshStackProbe.slotAcrossCall();
         check(slot.equals("call,successor"), "a successor offered to the slot during the call runs after it: " + slot);
@@ -261,7 +302,17 @@ public class TestFreshStack {
 
         // Deep recursions through free guards. Without the handoffs these overflow a 1 MB stack after a few
         // thousand levels.
-        deepCase("deep, a handoff every 200 levels", 20_000, 200, 200);
+        if (cramped != null) {
+            System.out.println("TestFreshStack: " + cramped + ": the deep cases and the transfers are skipped");
+            if (!failures.isEmpty()) {
+                System.out.println("FAILED: " + failures);
+                System.exit(1);
+            }
+            System.out.println("TestFreshStack passed (" + checks.get() + " checks; deep cases and transfers skipped)");
+            System.exit(0);
+        }
+        // 6,000 levels nest 30 helpers: 7.5 GB of address space at the default size (see tooLittleAddressSpace).
+        deepCase("deep, a handoff every 200 levels", 6_000, 200, 200);
         // On a fresh stack, a bound scaled by its size (4 KB a level: a level is a guarded body's few frames).
         int freshBound = (int) Math.min(50_000, Guard.freshStackSize() / 4096);
         deepCase("deep, every 200 levels on the caller's stack, " + freshBound + " on a fresh one", 200_000, 200,

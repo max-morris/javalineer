@@ -2,6 +2,7 @@ package edu.lsu.cct.javalineer;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * White-box checks for TestFreshStack, which need Javalineer's package-private guard state: assertLocked and the
@@ -61,6 +62,57 @@ public final class FreshStackProbe {
             tr.slot = null;
         }
         return String.join(",", order);
+    }
+
+    /**
+     * Under -ea, a call that leaves the guard state changed (here, a body count it never takes back) fails the state
+     * assertion. The trampoline must still be given back (lent is 0 after, and Pool.join on the caller's own stack
+     * waits as usual), and if the call threw too, the caller gets the call's throwable with the AssertionError
+     * suppressed under it. If it returned, the caller gets the AssertionError. Returns null if all holds, or what
+     * didn't.
+     */
+    public static String brokenStateIsReported() {
+        GuardTask.Trampoline tr = GuardTask.Trampoline.current();
+        var thrown = new RuntimeException("expected by TestFreshStack: a call that breaks the guard state");
+        Throwable got = null;
+        try {
+            Guard.callOnFreshStack(() -> {
+                GuardTask.Trampoline.current().bodies++;
+                throw thrown;
+            });
+        } catch (Throwable t) {
+            got = t;
+        } finally {
+            tr.bodies--;
+        }
+        if (got != thrown) {
+            return "the call's own throwable did not come back: " + got;
+        }
+        if (thrown.getSuppressed().length != 1 || !(thrown.getSuppressed()[0] instanceof AssertionError)) {
+            return "the AssertionError was not suppressed under the call's throwable: "
+                   + java.util.Arrays.toString(thrown.getSuppressed());
+        }
+        if (tr.lent != 0) {
+            return "the trampoline stayed lent after a throwing call (lent " + tr.lent + ")";
+        }
+        got = null;
+        try {
+            Guard.callOnFreshStack(() -> GuardTask.Trampoline.current().bodies++);
+        } catch (Throwable t) {
+            got = t;
+        } finally {
+            tr.bodies--;
+        }
+        if (!(got instanceof AssertionError)) {
+            return "a returning call that broke the state did not fail with AssertionError: " + got;
+        }
+        if (tr.lent != 0) {
+            return "the trampoline stayed lent after a returning call (lent " + tr.lent + ")";
+        }
+        if (Pool.join(CompletableFuture.supplyAsync(() -> 5, Pool.getPool())) != 5) {
+            return "Pool.join on the caller's stack after the failures";
+        }
+        return null;
     }
 
     /** The trampoline is no longer lent once the call returns, and the helper thread drops it. */

@@ -131,11 +131,16 @@ final class FreshStack {
                     }
                 }
             } finally {
-                assert lent.bodies == bodies && lent.held == held && lent.running == running
-                        : "a call on a fresh stack left Javalineer's guard state changed";
-                GuardTask.Trampoline.giveBack(lent);
-                interruptedAfter = Thread.interrupted();
-                me.setContextClassLoader(null);
+                // The trampoline goes back whatever the assertion finds: if it fired before giveBack, the caller's
+                // trampoline would stay counted as lent, and its own later Pool.join would refuse to wait.
+                try {
+                    assert lent.bodies == bodies && lent.held == held && lent.running == running
+                            : "a call on a fresh stack left Javalineer's guard state changed";
+                } finally {
+                    GuardTask.Trampoline.giveBack(lent);
+                    interruptedAfter = Thread.interrupted();
+                    me.setContextClassLoader(null);
+                }
             }
         }
 
@@ -176,10 +181,13 @@ final class FreshStack {
                 try {
                     c.runHere();
                 } catch (Throwable t) {
-                    // runHere catches everything the call and the hooks throw; only an error in its own bookkeeping
-                    // could get here, and the caller must still be told, or it would wait forever.
+                    // runHere catches everything the call and the hooks throw; only its own bookkeeping (the state
+                    // assertion, or an error in it) can get here, and the caller must still be told, or it would
+                    // wait forever. If the call threw too, both are kept: this one as suppressed under the call's.
                     if (c.failure == null) {
                         c.failure = t;
+                    } else if (c.failure != t) {
+                        c.failure.addSuppressed(t);
                     }
                 }
                 // Idle again before the caller is woken, so that a caller making call after call finds this helper.
