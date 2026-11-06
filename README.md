@@ -149,8 +149,11 @@ runs `call` on a fresh stack, another thread's, while this thread waits, and ret
 it throws, the same object. To Javalineer it is a plain call: the thread's guard state is lent for its length, so
 `Guard.has`, nested acquisitions and the hand-off of released guards behave exactly as on this thread, and nothing
 else runs on this thread meanwhile. A caller counting its depth takes one past some bound and gets
-`Guard.freshStackSize()` bytes to go on with (`JAVALINEER_FRESH_STACK_SIZE`, 256 MB by default; only touched
-pages use memory). The fresh stacks are helper threads kept for reuse, so a handoff costs a few microseconds.
+`Guard.freshStackSize()` bytes to go on with (`JAVALINEER_FRESH_STACK_SIZE`, 256 MB by default). The fresh stacks
+are helper threads kept for reuse, so a handoff costs a few microseconds. Each helper reserves its whole stack as
+address space, though only touched pages use memory, and nested calls hold one helper per level. So under
+`ulimit -v`, or strict overcommit, the depth of nesting at once is bounded, and the call past it fails with
+`OutOfMemoryError`. A rethrown exception keeps the fresh stack's trace only; the caller's frames are not in it.
 
 `callOnFreshStack(call, enter, exit)` also runs `enter` before `call` and `exit` after it, on the fresh stack, for the
 caller's own thread-local state. If no thread can be started for the call, it throws `OutOfMemoryError` and `call`

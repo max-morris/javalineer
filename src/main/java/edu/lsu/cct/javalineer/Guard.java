@@ -286,10 +286,22 @@ public class Guard implements Comparable<Guard> {
      * <p>
      * <b>Failure.</b> A {@link Throwable} that {@code call} throws, an {@link Error} or {@link StackOverflowError}
      * included, is rethrown here as the same object, unwrapped and unreported (a plain call reports nothing either:
-     * Javalineer's task failure handler hears of it if it escapes a task's body, as from an inline call). If no fresh
-     * stack can be started (the JVM or the OS refuses a thread), {@code call} does not run, the guard state is
-     * untouched, and an {@link OutOfMemoryError} saying so is thrown, with the refusal as its cause: never a fallback
-     * to running {@code call} on this stack, which would lose the guarantee without a sign.
+     * Javalineer's task failure handler hears of it if it escapes a task's body, as from an inline call). Being the
+     * same object, it carries the stack trace it was made with, the fresh stack's: this thread's frames, below the
+     * call, are not in it, as they would be had the call run inline. (They aren't added as a suppressed throwable
+     * either: that would change the object, and an exception object thrown again and again would collect one per
+     * throw. A caller that wants them can catch and add its own.) If no fresh stack can be started (the JVM or the OS
+     * refuses a thread), {@code call} does not run, the guard state is untouched, and an {@link OutOfMemoryError}
+     * saying so is thrown, with the refusal as its cause: never a fallback to running {@code call} on this stack,
+     * which would lose the guarantee without a sign.
+     * <p>
+     * <b>Resources.</b> Each fresh stack is a helper thread whose whole stack ({@link #freshStackSize()}, 256 MB by
+     * default) is reserved as address space while it lives; only the pages a call touches use memory. Helpers are
+     * reused, and one idle for 10 seconds ends. A chain of nested calls holds one helper per level of nesting, so its
+     * reservation grows by the stack size a level: under a limit on address space ({@code ulimit -v}), or with strict
+     * overcommit ({@code vm.overcommit_memory=2}), where a reservation counts fully against the commit limit, the
+     * number of nested calls at once is bounded, and the call past the bound fails with the
+     * {@link OutOfMemoryError} above.
      * <p>
      * <b>Hooks</b>, for the caller's own thread-local state, which Javalineer can't know: {@code enter} runs on the
      * fresh stack after the guard state is installed and before {@code call}, and {@code exit} runs there after
