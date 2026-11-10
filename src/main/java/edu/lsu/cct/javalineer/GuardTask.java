@@ -23,9 +23,13 @@ import java.util.concurrent.RejectedExecutionException;
  */
 final class GuardTask extends CompletableFuture<Void> {
     /**
-     * The link to the successor, accessed only through {@link #NEXT} with volatile semantics (compareAndSet,
-     * getAndSet), exactly as the AtomicReference it replaces was: a field of the task itself rather than a
-     * separate object, so the queue costs one object (and one cache line) less per task.
+     * The link to the successor: null, then the successor or {@link #DONE}, then DONE for good. Every write goes
+     * through {@link #NEXT}: the enqueuer's compareAndSet from null to the successor ({@link #link}), the release's
+     * compareAndSet from null to DONE when it finds no successor, and its setRelease of DONE over a successor it
+     * found ({@link #takeNext}). The plain reads are volatile reads: link's check for DONE before its CAS, and
+     * takeNext's read of a linked successor (and its read again after a failed CAS), each of which synchronizes with
+     * the write it sees (see there); also toString. A field of the task itself rather than a separate
+     * AtomicReference, so the queue costs one object (and one cache line) less per task.
      */
     private volatile GuardTask next;
     private static final VarHandle NEXT;
@@ -323,9 +327,14 @@ final class GuardTask extends CompletableFuture<Void> {
 
         /** Ends {@link #lend}: the helper no longer has tr, which goes back to its waiting owner. */
         static void giveBack(Trampoline tr) {
-            assert CURRENT.get() == tr : "a fresh stack's trampoline was replaced during the call";
-            tr.lent--;
-            CURRENT.remove();
+            // The check fires after the trampoline is given back, never instead of it: an assertion that left lent
+            // counted would make every later Pool.join of the owner refuse to wait.
+            try {
+                assert CURRENT.get() == tr : "a fresh stack's trampoline was replaced during the call";
+            } finally {
+                tr.lent--;
+                CURRENT.remove();
+            }
         }
 
         /**

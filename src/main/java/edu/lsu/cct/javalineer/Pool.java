@@ -427,8 +427,7 @@ public class Pool {
             }
         }
         sb.append("  likely causes: a completion cycle (a future completed only by a continuation that waits for it, ")
-          .append("directly or through other futures), a latch signaled fewer times than its count, or a condition ")
-          .append("never signaled.\n");
+          .append("directly or through other futures), or a condition never signaled.\n");
         return sb.toString();
     }
 
