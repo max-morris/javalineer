@@ -153,7 +153,9 @@ else runs on this thread meanwhile. A caller counting its depth takes one past s
 are helper threads kept for reuse, so a handoff costs a few microseconds. Each helper reserves its whole stack as
 address space, though only touched pages use memory, and nested calls hold one helper per level. So under
 `ulimit -v`, or strict overcommit, the depth of nesting at once is bounded, and the call past it fails with
-`OutOfMemoryError`. A rethrown exception keeps the fresh stack's trace only; the caller's frames are not in it.
+`OutOfMemoryError`. A rethrown exception keeps the fresh stack's trace only; the caller's frames are not in it. If
+the caller fails while it waits (say a `StackOverflowError`, since callers are deep), it still waits for the call to
+end before it throws: it never leaves while the call may still run on its guard state.
 
 `callOnFreshStack(call, enter, exit)` also runs `enter` before `call` and `exit` after it, on the fresh stack, for the
 caller's own thread-local state. If no thread can be started for the call, it throws `OutOfMemoryError` and `call`

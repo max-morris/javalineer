@@ -71,7 +71,8 @@ final class FreshStack {
         final Runnable enter, exit;
         final GuardTask.Trampoline lent;
         final ClassLoader loader;
-        final boolean interruptedBefore;
+        /** The caller's interrupt status, read (and cleared) just before the handoff, which publishes it. */
+        boolean interruptedBefore;
         final Thread waiter;
         T result;
         Throwable failure;
@@ -79,13 +80,12 @@ final class FreshStack {
         volatile boolean done;
 
         Call(Supplier<T> body, Runnable enter, Runnable exit, GuardTask.Trampoline lent, ClassLoader loader,
-             boolean interruptedBefore, Thread waiter) {
+             Thread waiter) {
             this.body = body;
             this.enter = enter;
             this.exit = exit;
             this.lent = lent;
             this.loader = loader;
-            this.interruptedBefore = interruptedBefore;
             this.waiter = waiter;
         }
 
@@ -154,6 +154,11 @@ final class FreshStack {
     private static final class Helper implements Runnable {
         /** The call handed to this helper and not yet taken by it, or null. Written by the caller, cleared here. */
         volatile Call<?> job;
+        /**
+         * Set by a caller whose start of this helper's thread threw: no call will ever be handed to this helper, so if
+         * the thread runs after all, it ends.
+         */
+        volatile boolean abandoned;
         final Thread thread;
 
         Helper() {
@@ -167,14 +172,17 @@ final class FreshStack {
             while (true) {
                 Call<?> c = job;
                 if (c == null) {
+                    if (abandoned) {
+                        return;
+                    }
                     LockSupport.parkNanos(this, KEEP_ALIVE_NANOS);
                     if (job == null && System.nanoTime() - idleSince >= KEEP_ALIVE_NANOS
                             && IDLE.removeFirstOccurrence(this)) {
                         // Off the idle stack, so no caller can hand this helper a call any more.
                         return;
                     }
-                    // A spurious wakeup, or a caller has taken this helper from the idle stack and its call is
-                    // on the way (or here): look again.
+                    // A spurious wakeup, or a caller has taken this helper from the idle stack (or has just started
+                    // it) and its call is on the way (or here): look again.
                     continue;
                 }
                 job = null;
@@ -202,41 +210,146 @@ final class FreshStack {
         }
     }
 
+    /** Points in {@link #call} where a test may inject a throw through {@link #hook}. */
+    static final int AFTER_START = 0, BEFORE_UNPARK = 1, AFTER_UNPARK = 2, BEFORE_PARK = 3, AFTER_PARK = 4,
+            AFTER_INTERRUPTED = 5;
+
+    /** A test hook (see {@link #hook}). */
+    interface Hook {
+        void at(int point);
+    }
+
+    /**
+     * For tests only, null otherwise: called on the caller at each point named above, where a throw stands for one
+     * the JVM could raise there (a StackOverflowError above all, since a caller is deep by design). Read once per
+     * call; a plain field, so a test sets it on the thread that makes the calls, or before starting the threads that
+     * do.
+     */
+    static Hook hook;
+
     static <T> T call(Supplier<T> body, Runnable enter, Runnable exit) {
         Objects.requireNonNull(body, "body");
+        final Hook k = hook;
         Thread me = Thread.currentThread();
         GuardTask.Trampoline lent = GuardTask.Trampoline.current();
-        Helper h = IDLE.pollFirst();
-        boolean fresh = h == null;
-        if (fresh) {
+        // The Call is built before a helper is taken from the idle stack, so a failure to build it strands none.
+        var c = new Call<>(body, enter, exit, lent, me.getContextClassLoader(), me);
+        // The caller's interrupt status goes with the call, as the rest of its thread state does.
+        c.interruptedBefore = Thread.interrupted();
+        Helper h;
+        try {
+            h = IDLE.pollFirst();
+        } catch (Throwable t) {
+            if (c.interruptedBefore) {
+                me.interrupt();
+            }
+            throw t;
+        }
+        if (h == null) {
+            // A new helper is handed the call only once its start has returned: if the start throws, the call was
+            // never handed over, so it cannot run, whether or not the thread started after all (on HotSpot it has
+            // not, but nothing promises that). Until a helper is handed its first call it is on no idle stack, so it
+            // can't time out while the call is on its way.
             try {
                 h = new Helper();
-            } catch (Throwable t) {
-                throw cannotStart(t);
-            }
-        }
-        // The caller's interrupt status goes with the call, as the rest of its thread state does.
-        var c = new Call<>(body, enter, exit, lent, me.getContextClassLoader(), Thread.interrupted(), me);
-        h.job = c;
-        if (fresh) {
-            try {
-                h.thread.start();
             } catch (Throwable t) {
                 if (c.interruptedBefore) {
                     me.interrupt();
                 }
                 throw cannotStart(t);
             }
-        } else {
-            LockSupport.unpark(h.thread);
+            try {
+                h.thread.start();
+                if (k != null) {
+                    k.at(AFTER_START);
+                }
+            } catch (Throwable t) {
+                h.abandoned = true;
+                if (c.interruptedBefore) {
+                    me.interrupt();
+                }
+                try {
+                    LockSupport.unpark(h.thread); // So that a thread which did start sees abandoned now.
+                } catch (Throwable ignored) {
+                    // It sees it when its park times out.
+                }
+                throw cannotStart(t);
+            }
         }
+        // The handoff. From here until c.done reads true, the helper may be running the call with this thread's
+        // trampoline lent, so this method must neither return nor throw: if it did, the caller's unwinding would
+        // release the guards the call runs under while the call still runs (proof/notes/discrepancies.md in
+        // Guardian, hole 71). So whatever this thread throws while it waits (a StackOverflowError at the edge of its
+        // stack, from the unpark, the park or the interrupt check) is remembered, the wait goes on, and the first
+        // such throwable is thrown only after the helper has given the trampoline back.
+        h.job = c;
+        Throwable first = null;
         // Like Thread.join and Pool.join, the wait is not interruptible: an interrupt is remembered and set again.
         boolean interrupted = false;
-        while (!c.done) {
-            LockSupport.park(c);
-            if (Thread.interrupted()) {
-                interrupted = true;
+        try {
+            if (k != null) {
+                k.at(BEFORE_UNPARK);
             }
+            // A new helper too: it may have looked for its call before the handoff, and parked.
+            LockSupport.unpark(h.thread);
+            if (k != null) {
+                k.at(AFTER_UNPARK);
+            }
+            while (!c.done) {
+                if (k != null) {
+                    k.at(BEFORE_PARK);
+                }
+                LockSupport.park(c);
+                if (k != null) {
+                    k.at(AFTER_PARK);
+                }
+                if (Thread.interrupted()) {
+                    interrupted = true;
+                }
+                if (k != null) {
+                    k.at(AFTER_INTERRUPTED);
+                }
+            }
+        } catch (Throwable t) {
+            first = t;
+        }
+        // Reached with the call still running only after a throwable. The wait goes on as a bare spin on the
+        // volatile: it calls nothing, so it needs no new frame and allocates nothing, and it can't fail where the
+        // park did. If the helper was never woken (the unpark itself threw), it finds the call when its idle park
+        // times out, within KEEP_ALIVE_NANOS, and this thread spins until the call ends. Should anything be thrown
+        // even here, it is caught and the spin resumes. Left uncovered is only what the JVM itself might raise at
+        // the outer loop's own instructions (an asynchronous exception, or the stack check of an on-stack-replacement
+        // entry, should the compiled frame be bigger than the interpreted one). The interrupt status is left as it
+        // is, set or not, since nothing clears it in the spin.
+        while (!c.done) {
+            try {
+                while (!c.done) {
+                    // Nothing: no call, so no frame and no allocation at the stack's edge.
+                }
+            } catch (Throwable ignored) {
+                // Keep waiting; the first throwable is the one reported.
+            }
+        }
+        // The helper has given the trampoline back and no longer touches the call: this thread may leave now.
+        if (first != null) {
+            Throwable f = c.failure;
+            try {
+                if (f != null && f != first) {
+                    first.addSuppressed(f);
+                }
+                if (interrupted || c.interruptedAfter) {
+                    me.interrupt();
+                }
+            } catch (Throwable ignored) {
+                // The first throwable is reported whatever this bookkeeping meets.
+            }
+            if (first instanceof RuntimeException) {
+                throw (RuntimeException) first;
+            }
+            if (first instanceof Error) {
+                throw (Error) first;
+            }
+            throw FreshStack.<RuntimeException>sneaky(first);
         }
         if (interrupted || c.interruptedAfter) {
             me.interrupt();

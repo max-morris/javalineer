@@ -293,7 +293,10 @@ public class Guard implements Comparable<Guard> {
      * throw. A caller that wants them can catch and add its own.) If no fresh stack can be started (the JVM or the OS
      * refuses a thread), {@code call} does not run, the guard state is untouched, and an {@link OutOfMemoryError}
      * saying so is thrown, with the refusal as its cause: never a fallback to running {@code call} on this stack,
-     * which would lose the guarantee without a sign.
+     * which would lose the guarantee without a sign. If this thread itself fails while it waits (a
+     * {@link StackOverflowError} above all, since the caller is deep by design), it still waits for {@code call} to
+     * end, and only then throws its own throwable, with the one {@code call} threw, if any, added as suppressed: this
+     * method never returns or throws while {@code call} may still run on this thread's guard state.
      * <p>
      * <b>Resources.</b> Each fresh stack is a helper thread whose whole stack ({@link #freshStackSize()}, 256 MB by
      * default) is reserved as address space while it lives; only the pages a call touches use memory. Helpers are
