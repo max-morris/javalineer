@@ -322,8 +322,12 @@ public class Pool {
 
     // ---- Bounded drains (J1) ----
 
-    /** The default drain bound: see {@link #setDrainBound(int)}. */
-    public static final int DEFAULT_DRAIN_BOUND = 256;
+    /**
+     * The default drain bound (see {@link #setDrainBound(int)}): 1,024, chosen from the local J1 sweep (Guardian proof
+     * notes javalineer-j1.md), where a hop every 1,024 handoffs cost nothing measurable on the queue benchmark and 256
+     * cost 5 to 10 percent; the cluster run may move it.
+     */
+    public static final int DEFAULT_DRAIN_BOUND = 1024;
 
     private static volatile int drainBound = parseDrainBound(System.getProperty("JAVALINEER_DRAIN_BOUND"));
 
