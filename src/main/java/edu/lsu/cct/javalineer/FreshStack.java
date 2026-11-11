@@ -38,7 +38,8 @@ final class FreshStack {
     /** How long an idle helper waits for another call before it ends. */
     private static final long KEEP_ALIVE_NANOS = 10_000_000_000L;
 
-    private static final ConcurrentLinkedDeque<Helper> IDLE = new ConcurrentLinkedDeque<>();
+    /** The idle helpers, most recently idle first. Package-private for a test that retires them. */
+    static final ConcurrentLinkedDeque<Helper> IDLE = new ConcurrentLinkedDeque<>();
 
     private static final AtomicLong HELPERS = new AtomicLong();
 
@@ -151,7 +152,7 @@ final class FreshStack {
         }
     }
 
-    private static final class Helper implements Runnable {
+    static final class Helper implements Runnable {
         /** The call handed to this helper and not yet taken by it, or null. Written by the caller, cleared here. */
         volatile Call<?> job;
         /**
@@ -186,21 +187,24 @@ final class FreshStack {
                     continue;
                 }
                 job = null;
+                // The caller is woken whatever happens from here on, or it would wait forever: if the bookkeeping
+                // below throws (adding a suppressed throwable, or the push, can fail to allocate), the caller is
+                // still told, and this helper then ends, off the idle stack.
                 try {
-                    c.runHere();
-                } catch (Throwable t) {
-                    // runHere catches everything the call and the hooks throw; only its own bookkeeping (the state
-                    // assertion, or an error in it) can get here, and the caller must still be told, or it would
-                    // wait forever. If the call threw too, both are kept: this one as suppressed under the call's.
-                    if (c.failure == null) {
-                        c.failure = t;
-                    } else if (c.failure != t) {
-                        c.failure.addSuppressed(t);
+                    try {
+                        c.runHere();
+                    } catch (Throwable t) {
+                        // runHere catches everything the call and the hooks throw; only its own bookkeeping (the
+                        // state assertion, or an error in it) can get here. If the call threw too, both are kept:
+                        // this one as suppressed under the call's.
+                        if (c.failure == null) {
+                            c.failure = t;
+                        } else if (c.failure != t) {
+                            c.failure.addSuppressed(t);
+                        }
                     }
-                }
-                // Idle again before the caller is woken, so that a caller making call after call finds this helper.
-                // The caller is woken even if that fails (an allocation failure), and this helper then ends.
-                try {
+                    // Idle again before the caller is woken, so that a caller making call after call finds this
+                    // helper.
                     IDLE.push(this);
                     idleSince = System.nanoTime();
                 } finally {
@@ -317,10 +321,11 @@ final class FreshStack {
         // volatile: it calls nothing, so it needs no new frame and allocates nothing, and it can't fail where the
         // park did. If the helper was never woken (the unpark itself threw), it finds the call when its idle park
         // times out, within KEEP_ALIVE_NANOS, and this thread spins until the call ends. Should anything be thrown
-        // even here, it is caught and the spin resumes. Left uncovered is only what the JVM itself might raise at
-        // the outer loop's own instructions (an asynchronous exception, or the stack check of an on-stack-replacement
-        // entry, should the compiled frame be bigger than the interpreted one). The interrupt status is left as it
-        // is, set or not, since nothing clears it in the spin.
+        // even here, it is caught and the spin resumes. Left uncovered is only a throwable landing on an instruction
+        // of this method after the handoff that is outside its two try blocks (local stores, the handler's store,
+        // the outer loop's test): an asynchronous one (JVMTI StopThread, or Thread.stop before JDK 20), or the stack
+        // check of an on-stack-replacement entry into this method, which on HotSpot can fail only if its compiled
+        // frame is over a page. The interrupt status is left as it is, set or not, since nothing clears it here.
         while (!c.done) {
             try {
                 while (!c.done) {

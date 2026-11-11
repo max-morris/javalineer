@@ -155,7 +155,8 @@ address space, though only touched pages use memory, and nested calls hold one h
 `ulimit -v`, or strict overcommit, the depth of nesting at once is bounded, and the call past it fails with
 `OutOfMemoryError`. A rethrown exception keeps the fresh stack's trace only; the caller's frames are not in it. If
 the caller fails while it waits (say a `StackOverflowError`, since callers are deep), it still waits for the call to
-end before it throws: it never leaves while the call may still run on its guard state.
+end before it throws, busy-waiting from then on, and the call's result is discarded: it never leaves while the call
+may still run on its guard state.
 
 `callOnFreshStack(call, enter, exit)` also runs `enter` before `call` and `exit` after it, on the fresh stack, for the
 caller's own thread-local state. If no thread can be started for the call, it throws `OutOfMemoryError` and `call`

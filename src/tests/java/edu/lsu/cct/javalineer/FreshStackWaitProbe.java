@@ -39,6 +39,22 @@ public final class FreshStackWaitProbe {
         FreshStack.hook = inj == null ? null : p -> inj.at(NAMES[p]);
     }
 
+    /**
+     * Retires every helper now idle, as its idle timeout would but at once: takes it off the idle stack (as a caller
+     * would) and marks it abandoned, so that it ends the next time it looks for a call. The next calls then start new
+     * helpers. Returns how many were retired.
+     */
+    public static int retireIdleHelpers() {
+        int n = 0;
+        FreshStack.Helper h;
+        while ((h = FreshStack.IDLE.pollFirst()) != null) {
+            h.abandoned = true;
+            java.util.concurrent.locks.LockSupport.unpark(h.thread);
+            n++;
+        }
+        return n;
+    }
+
     /** How many fresh stacks this thread's trampoline is lent to now. */
     public static int lent() {
         return GuardTask.Trampoline.current().lent;

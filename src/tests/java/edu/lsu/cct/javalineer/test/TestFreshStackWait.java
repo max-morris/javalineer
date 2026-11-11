@@ -15,6 +15,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.Supplier;
 
 /**
@@ -32,9 +33,12 @@ import java.util.function.Supplier;
  * <li>giveBack's assertion fires after the trampoline is given back.</li>
  * <li>Mutual exclusion: bodies on two guards, and on both, each making its work in a call on a fresh stack and letting
  *     an injected throw escape (so the guard is released by the body's failure), while throws are injected at random
- *     points. No call runs outside its body's hold of the guard, no update is lost, and no caller leaves before its
- *     call ends.</li>
+ *     points, and new helpers keep being started (idle ones are retired) and one start in two fails. No call runs
+ *     outside its body's hold of the guard, no update is lost, no caller leaves before its call ends, and the call of
+ *     a failed start never runs.</li>
  * </ul>
+ * A watchdog fails the run, printing the failures so far, if it doesn't end in time. TestFreshStackEdge has the
+ * throwables the JVM itself raises at the edge of the stack.
  */
 public class TestFreshStackWait {
     static final long TIMEOUT_SECONDS = 120;
@@ -179,12 +183,34 @@ public class TestFreshStackWait {
         };
     }
 
+    static volatile String phase = "start";
+
+    /**
+     * Fails the run, with the failures so far, if it hasn't ended within WATCHDOG_SECONDS: a caller that waits forever
+     * (for instance for a helper that has ended) shows as a failed check, not as a silent timeout.
+     */
+    static void startWatchdog() {
+        Thread w = new Thread(() -> {
+            sleep(WATCHDOG_SECONDS * 1000);
+            System.out.println("FAILED: no end after " + WATCHDOG_SECONDS + " s, in phase '" + phase + "'; failures so "
+                               + "far: " + failures);
+            System.out.flush();
+            Runtime.getRuntime().halt(1);
+        }, "watchdog");
+        w.setDaemon(true);
+        w.start();
+    }
+
+    static final long WATCHDOG_SECONDS = 200;
+
     public static void main(String[] args) throws Exception {
         Test.requireAssert();
+        startWatchdog();
         var reports = new AtomicInteger();
         Pool.setTaskFailureHandler(t -> reports.incrementAndGet());
         Thread caller = Thread.currentThread();
 
+        phase = "1, a failed start";
         // 1. A throw right after a new helper's start returned (first, so that no idle helper exists yet): the start
         // counts as failed, the call is never handed over, and the thread that did start ends.
         Set<Thread> before = helpers();
@@ -211,6 +237,7 @@ public class TestFreshStackWait {
         check(FreshStackWaitProbe.lent() == 0, "a failed start leaves the trampoline unlent");
         check(Guard.callOnFreshStack(() -> 7) == 7, "a call after a failed start works");
 
+        phase = "2, a throw at each point of the wait";
         // 2. A throw at each point of the wait. The call sleeps, so that the caller, if it left early, would be seen
         // leaving before the call finished. BEFORE_UNPARK last: the helper is never woken then and finds the call
         // when its idle park times out (up to 10 s).
@@ -270,15 +297,32 @@ public class TestFreshStackWait {
         check(gb == null, "giveBack: " + gb);
 
         // 4. Mutual exclusion under injected failures. Throws at random points (not BEFORE_UNPARK, whose 10 s wake-up
-        // would make this slow; part 2 covers it), on every thread, at each point one time in 20.
-        String[] wait = {"AFTER_START", "AFTER_UNPARK", "BEFORE_PARK", "AFTER_PARK", "AFTER_INTERRUPTED"};
+        // would make this slow; part 2 covers it), on every thread, at each point of the wait one time in 20. So that
+        // calls keep starting new helpers while others hand off, a retirer takes the idle helpers off the idle stack
+        // every 0.2 ms (as their timeout would), and a start fails one time in 2 (AFTER_START): its helper is
+        // abandoned while other callers hand off, and must never run a call.
+        phase = "4, mutual exclusion";
+        String[] wait = {"AFTER_UNPARK", "BEFORE_PARK", "AFTER_PARK", "AFTER_INTERRUPTED"};
         Set<String> chosen = new HashSet<>(Arrays.asList(wait));
+        AtomicInteger atStart = new AtomicInteger(), retired = new AtomicInteger();
         FreshStackWaitProbe.setInjector(p -> {
-            if (chosen.contains(p) && ThreadLocalRandom.current().nextInt(20) == 0) {
+            if (p.equals("AFTER_START") ? ThreadLocalRandom.current().nextInt(2) == 0
+                                        : chosen.contains(p) && ThreadLocalRandom.current().nextInt(20) == 0) {
                 injected.incrementAndGet();
+                if (p.equals("AFTER_START")) {
+                    atStart.incrementAndGet();
+                }
                 throw new StackOverflowError("injected at " + p);
             }
         });
+        AtomicBoolean stressDone = new AtomicBoolean();
+        Thread retirer = new Thread(() -> {
+            while (!stressDone.get()) {
+                retired.addAndGet(FreshStackWaitProbe.retireIdleHelpers());
+                LockSupport.parkNanos(200_000);
+            }
+        }, "retirer");
+        retirer.start();
         Shared a = new Shared(), b = new Shared();
         int perGuard = 2_000, both = 500;
         List<CompletableFuture<?>> futs = new ArrayList<>();
@@ -292,6 +336,8 @@ public class TestFreshStackWait {
         int total = futs.size();
         CompletableFuture.allOf(futs.stream().map(f -> f.handle((v, t) -> null)).toArray(CompletableFuture[]::new))
                          .get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        stressDone.set(true);
+        retirer.join();
         FreshStackWaitProbe.setInjector(null);
         int failed = 0;
         for (var f : futs) {
@@ -300,7 +346,8 @@ public class TestFreshStackWait {
             }
         }
         System.out.println("mutual exclusion: " + total + " bodies, " + injected.get() + " throws injected, "
-                           + escaped.get() + " bodies failed, " + notRun.get() + " calls not run");
+                           + escaped.get() + " bodies failed, " + notRun.get() + " calls not run (" + atStart.get()
+                           + " starts failed), " + retired.get() + " idle helpers retired");
         check(bodyIds.get() == total, "every body ran (" + bodyIds.get() + " of " + total + ")");
         check(overlaps.get() == 0, overlaps.get() + " overlaps of a call with another body on its guard");
         check(leftEarly.get() == 0, leftEarly.get() + " callers left before their call finished");
@@ -311,8 +358,12 @@ public class TestFreshStackWait {
                                                + injected.get() + ")");
         check(failed == escaped.get(), "the failed bodies' futures failed (" + failed + ")");
         check(injected.get() > 50, "enough throws were injected to mean something (" + injected.get() + ")");
+        check(notRun.get() == atStart.get() && atStart.get() > 0,
+              "every failed start, and only those, left its call not run (" + notRun.get() + " not run, "
+              + atStart.get() + " starts failed)");
         check(FreshStackWaitProbe.lent() == 0, "the main thread's trampoline is not lent");
 
+        phase = "end";
         if (!failures.isEmpty()) {
             System.out.println("FAILED: " + failures);
             System.exit(1);
