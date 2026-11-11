@@ -32,7 +32,15 @@ import java.util.concurrent.atomic.AtomicReference;
  * (runPartitioned, runPartitionedFut, reducePartitioned) goes through this one admission, so they cannot deadlock
  * against each other either. A list may appear more than once in a call only with read intents (each is admitted, in
  * a row): with a write, the call's second admission would conflict with its own first one and wait forever, so the
- * call is rejected with IllegalArgumentException.
+ * call is rejected with IllegalArgumentException. Under fair admission such a list is admitted once, for its first
+ * position: its positions have the same read range, and a second admission could be queued behind a write that came
+ * between the two, which waits for the first, so the call would never be admitted.
+ * <p>
+ * The order in which a list admits the calls that request it is {@link RangeAccountant}'s policy: reader preference
+ * by default, or fair admission ({@code -DJAVALINEER_FAIR_RANGES=true}), under which a request is also refused while a
+ * conflicting request made before it is still queued. Both keep the guard order above: under fair admission a call
+ * holding some of its lists waits on its next list for the ranges held there and for the conflicting requests queued
+ * there before it, and each of those calls waits only for lists later in the order or for requests queued earlier.
  * <p>
  * A runPartitionedFut call ({@link #withPartFutures}) differs in one thing: a part is a body returning a future, and
  * the call's ranges are released when the last part's body returns, not when the parts' futures complete, so a part
@@ -58,6 +66,10 @@ final class PartCall {
     // The lists in admission order, and how many of them have been admitted (written only by the admission chain)
     private final int[] order;
     private int admitted = 0;
+    // Under fair admission, whether the request on the list being admitted has been refused, and so is queued in that
+    // list's RangeAccountant. Read and written only by that list's checks, under its guard; false again once admitted,
+    // before the next list's first check (which runs after the admission's future completes).
+    private boolean queued = false;
 
     private PartCall(int nParts, int nGhosts, PartitionableList<?>[] lists, PartIntentKind[] kinds, int[] lo, int[] hi,
                      int[] partBegin, int[] partEnd) {
@@ -253,10 +265,21 @@ final class PartCall {
         }
         int j = order[k];
         var list = lists[j];
+        if (RangeAccountant.FAIR && k > 0 && lists[order[k - 1]] == list) {
+            // A list repeated in the call (read intents only, the same range): its first position's read covers it
+            admitted = k + 1;
+            return admitFrom(k + 1);
+        }
         var kind = kinds[j];
         int l = lo[j], h = hi[j];
         return Guard.runCondition(list.rangeAccountantCond, (rangeAccountantVar) -> {
-            return rangeAccountantVar.get().isRangeOk(kind, l, h, nGhosts);
+            if (!RangeAccountant.FAIR) {
+                return rangeAccountantVar.get().isRangeOk(kind, l, h, nGhosts);
+            }
+            // Fair admission: the call names its request, which is queued from its first refusal until admitted
+            boolean ok = rangeAccountantVar.get().isRangeOkFair(this, queued, kind, l, h, nGhosts);
+            queued = !ok;
+            return ok;
         }).thenCompose(v -> {
             admitted = k + 1;
             return admitFrom(k + 1);
@@ -315,6 +338,11 @@ final class PartCall {
         for (int k = 0; k < admitted; k++) {
             int j = order[k];
             var list = lists[j];
+            if (RangeAccountant.FAIR && k > 0 && lists[order[k - 1]] == list) {
+                // Admitted once, for its first position (admitFrom), so released once
+                releases[k] = CompletableFuture.completedFuture(null);
+                continue;
+            }
             var kind = kinds[j];
             int l = lo[j], h = hi[j];
             releases[k] = Guard.runGuarded(list.rangeAccountant, (rangeAccountantVar) -> {
