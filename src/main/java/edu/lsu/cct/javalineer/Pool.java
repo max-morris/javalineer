@@ -362,7 +362,9 @@ public class Pool {
      * Scope of the progress guarantee: on the fixed pool (the default), a FIFO executor with one queue that every
      * worker takes from, it holds because of bounded drains, which must then stay on for the whole run (a program
      * that relies on it must not call setDrainBound(0) midway). On the dynamic pool it holds whatever the bound,
-     * because every task gets a thread of its own. The fork-join pool is excluded: a flushed drain lands on the
+     * because every task gets a thread of its own; with the drain gate on (JAVALINEER_DRAIN_FLUSH waiting or busy,
+     * busy the default), the bound has no effect there at all: the dynamic pool's SynchronousQueue always reads
+     * empty, so a drain whose budget is spent runs on and never flushes. The fork-join pool is excluded: a flushed drain lands on the
      * submitting worker's own deque, which that worker keeps serving, so a submission from outside can still wait
      * forever.
      *
