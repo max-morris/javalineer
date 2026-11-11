@@ -345,9 +345,9 @@ public class Pool {
     /**
      * Sets the drain bound B (J1, bounded drains). A drain is the loop in which a thread that released a guard runs
      * the tasks queued behind it, one after another: the top-level drain of a runGuarded call that ran inline, and the
-     * trampoline loop of a pool task. With B positive, a drain runs at most B tasks inline (the top-level drain: B
-     * successors after the caller's own task; a pool task's loop: its own item and B - 1 successors) and then hands
-     * the next one back to the pool, so every pool worker returns to the pool regularly and a submission waiting in the pool is reached
+     * trampoline loop of a pool task. With B positive, a drain runs its own item (the caller's task, or the pool task's
+     * first handoff) plus at most B successors inline, and then hands the next one back to the pool, so every pool
+     * worker returns to the pool regularly and a submission waiting in the pool is reached
      * even while a guard stays hot forever. That is the premise of the never-ending progress theorem; with B = 0
      * (off) a drain runs as long as its queue stays nonempty, which is the behavior before J1. The bound starts at
      * the system property JAVALINEER_DRAIN_BOUND (a number, or "off"), else {@link #DEFAULT_DRAIN_BOUND}. A change
@@ -364,10 +364,22 @@ public class Pool {
         return drainBound;
     }
 
-    /** The budget of task runs for a drain that starts now: B, or Long.MAX_VALUE when bounded drains are off. */
+    /**
+     * The budget of successor runs for a top-level drain that starts now (its own item, the caller's task, ran before
+     * the drain): B, or Long.MAX_VALUE when bounded drains are off.
+     */
     static long drainBudget() {
         int b = drainBound;
         return b > 0 ? b : Long.MAX_VALUE;
+    }
+
+    /**
+     * The budget of task runs for a trampoline loop that starts now, which counts its own first item: B + 1, or
+     * Long.MAX_VALUE when bounded drains are off.
+     */
+    static long loopBudget() {
+        int b = drainBound;
+        return b > 0 ? (long) b + 1 : Long.MAX_VALUE;
     }
 
     // ---- The registry of pending futures (debug level, off by default) ----

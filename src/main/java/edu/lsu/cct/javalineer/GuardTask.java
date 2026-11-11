@@ -401,14 +401,15 @@ final class GuardTask extends CompletableFuture<Void> {
 
         /**
          * The trampoline loop. With bounded drains on (J1, {@link Pool#setDrainBound(int)}), the loop and the handoffs
-         * it runs share one budget of B task runs, counting every run_ the loop starts, its own first item included
-         * (which therefore always runs, B being at least 1): once it is spent, a successor still pending, found by a
-         * handoff ({@link #handOff_(long)}) or left in the slot, is handed back to the pool and the loop returns. So a
-         * pool task runs its own item and at most B - 1 successors. (The top-level drain of {@link #free_()} runs at
-         * most B successors after the caller's task, whose run is not part of the drain.)
+         * it runs share one budget of B + 1 task runs, counting every run_ the loop starts: its own first item (which
+         * therefore always runs) and at most B successors after it. Once the budget is spent, a successor still
+         * pending, found by a handoff ({@link #handOff_(long)}) or left in the slot, is handed back to the pool and the
+         * loop returns. So every drain runs its own item plus at most B successors, here as in the top-level drain of
+         * {@link #free_()}.
          */
         private void loop(GuardTask succ) {
-            long left = Pool.drainBudget();
+            // B + 1: the loop's own item, then at most B successors.
+            long left = Pool.loopBudget();
             try {
                 while (succ != null) {
                     running = succ;
