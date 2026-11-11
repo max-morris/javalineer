@@ -48,6 +48,7 @@ public class Pool {
             ((ExecutorService) old).shutdown();
         }
         thePool = newPool instanceof CountingExecutor ? newPool : new CountingExecutor(newPool);
+        drainWaitQueue = waitQueueOf(thePool);
     }
 
     private static volatile Consumer<? super Throwable> taskFailureHandler = null;
@@ -391,6 +392,38 @@ public class Pool {
     static long loopBudget() {
         int b = drainBound;
         return b > 0 ? (long) b + 1 : Long.MAX_VALUE;
+    }
+
+    /*
+     * PROTOTYPE (local branch j1/c12-fix, for measurement; outside the shape j1-model-plan.md section 6 requires):
+     * a drain whose budget is spent flushes only while a submission is waiting in the executor's queue. A flush exists
+     * to let waiting pool work reach a worker; with nothing waiting it only moves the drain off the thread that
+     * issues (con1_2) or strands it behind workers that are all busy (con1_8, the arena at T = 32). The waiter's
+     * bound is unchanged: once a submission waits, every drain on a worker flushes at its next successor past the
+     * budget. Lost: the unconditional bound on a runGuarded caller (its own body plus at most B successors), which
+     * now holds only while something waits. JAVALINEER_DRAIN_FLUSH=always restores J1 as specified.
+     */
+    private static final boolean FLUSH_ONLY_WHEN_WAITING =
+            !"always".equalsIgnoreCase(System.getProperty("JAVALINEER_DRAIN_FLUSH", "waiting").strip());
+
+    /**
+     * The queue in which the executor keeps submissions waiting for a worker (a ThreadPoolExecutor's), or null when
+     * that cannot be read cheaply (fork-join, DebugPool, an executor of the user's), in which case a spent budget
+     * always flushes. A cached (dynamic) pool's SynchronousQueue is always empty: every task gets a thread.
+     */
+    private static volatile BlockingQueue<Runnable> drainWaitQueue = waitQueueOf(thePool);
+
+    private static BlockingQueue<Runnable> waitQueueOf(Executor e) {
+        if (e instanceof CountingExecutor) {
+            e = ((CountingExecutor) e).delegate;
+        }
+        return FLUSH_ONLY_WHEN_WAITING && e instanceof ThreadPoolExecutor ? ((ThreadPoolExecutor) e).getQueue() : null;
+    }
+
+    /** Whether a drain whose budget is spent flushes now (see FLUSH_ONLY_WHEN_WAITING). */
+    static boolean flushWanted() {
+        BlockingQueue<Runnable> q = drainWaitQueue;
+        return q == null || !q.isEmpty();
     }
 
     // ---- The registry of pending futures (debug level, off by default) ----

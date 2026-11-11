@@ -416,7 +416,7 @@ final class GuardTask extends CompletableFuture<Void> {
                     slot = null;
                     left = succ.handOff_(left);
                     succ = slot;
-                    if (succ != null && left <= 0) {
+                    if (succ != null && left <= 0 && Pool.flushWanted()) {
                         // J1 flush point (loop): the budget is spent and the slot holds the next successor.
                         slot = null;
                         submit(succ);
@@ -452,7 +452,7 @@ final class GuardTask extends CompletableFuture<Void> {
             if (gt == null) {
                 return left;
             }
-            if (left <= 0) {
+            if (left <= 0 && Pool.flushWanted()) {
                 // J1 flush point (handoff): released, successor found, budget spent.
                 Trampoline.submit(gt);
                 return left;
@@ -496,7 +496,7 @@ final class GuardTask extends CompletableFuture<Void> {
             }
             assert gt.guard.locked.compareAndSet(true, false);
             gt = gt.takeNext();
-            if (gt != null && left <= 0) {
+            if (gt != null && left <= 0 && Pool.flushWanted()) {
                 // J1 flush point (top-level free_): released, successor found, budget spent.
                 Trampoline.submit(gt);
                 return;
