@@ -48,7 +48,8 @@ public class Pool {
             ((ExecutorService) old).shutdown();
         }
         thePool = newPool instanceof CountingExecutor ? newPool : new CountingExecutor(newPool);
-        drainWaitQueue = waitQueueOf(thePool);
+        drainGatePool = gatePoolOf(thePool);
+        drainWaitQueue = drainGatePool == null ? null : drainGatePool.getQueue();
     }
 
     private static volatile Consumer<? super Throwable> taskFailureHandler = null;
@@ -395,35 +396,71 @@ public class Pool {
     }
 
     /*
-     * PROTOTYPE (local branch j1/c12-fix, for measurement; outside the shape j1-model-plan.md section 6 requires):
-     * a drain whose budget is spent flushes only while a submission is waiting in the executor's queue. A flush exists
-     * to let waiting pool work reach a worker; with nothing waiting it only moves the drain off the thread that
-     * issues (con1_2) or strands it behind workers that are all busy (con1_8, the arena at T = 32). The waiter's
-     * bound is unchanged: once a submission waits, every drain on a worker flushes at its next successor past the
-     * budget. Lost: the unconditional bound on a runGuarded caller (its own body plus at most B successors), which
-     * now holds only while something waits. JAVALINEER_DRAIN_FLUSH=always restores J1 as specified.
+     * PROTOTYPE (local branches j1/c12-fix and j1/c12-fix2, for measurement; outside the shape j1-model-plan.md
+     * section 6 requires). JAVALINEER_DRAIN_FLUSH picks when a drain whose budget is spent flushes:
+     *   always   J1 as specified: at once.
+     *   waiting  (j1/c12-fix) only while a submission waits in the executor's queue. A flush exists to let waiting
+     *            pool work reach a worker; with nothing waiting it only moves the drain off the thread that issues
+     *            (con1_2) or strands it behind workers that are all busy (con1_8, the arena at T = 32).
+     *   busy     (j1/c12-fix2, the default here) only while a submission waits AND no worker is free. A free worker
+     *            (one not running a task) takes the queue's head by itself, so a flush then helps nobody; it only
+     *            strands the drain behind the waiter, as at the start of every arena pass, when the issuers just
+     *            submitted wait for parked workers to wake. Once every worker is busy, a waiter makes every drain
+     *            flush at its next successor past the budget, as with waiting.
+     * The waiter's bound: once a submission waits and no worker is free, and for as long as that lasts, a drain on a
+     * worker runs at most B more successors (waiting), or B + FREE_WORKER_RECHECK (busy), before it flushes. Lost
+     * against J1: the unconditional bound on a runGuarded caller.
      */
-    private static final boolean FLUSH_ONLY_WHEN_WAITING =
-            !"always".equalsIgnoreCase(System.getProperty("JAVALINEER_DRAIN_FLUSH", "waiting").strip());
+    private static final String FLUSH_MODE =
+            System.getProperty("JAVALINEER_DRAIN_FLUSH", "busy").strip().toLowerCase();
+    private static final boolean FLUSH_GATED = FLUSH_MODE.equals("waiting") || FLUSH_MODE.equals("busy");
+    private static final boolean FLUSH_NEEDS_NO_FREE_WORKER = FLUSH_MODE.equals("busy");
 
     /**
-     * The queue in which the executor keeps submissions waiting for a worker (a ThreadPoolExecutor's), or null when
-     * that cannot be read cheaply (fork-join, DebugPool, an executor of the user's), in which case a spent budget
-     * always flushes. A cached (dynamic) pool's SynchronousQueue is always empty: every task gets a thread.
+     * The executor whose queue and workers gate a flush (a ThreadPoolExecutor), or null when that cannot be read
+     * cheaply (fork-join, DebugPool, an executor of the user's), in which case a spent budget always flushes. A cached
+     * (dynamic) pool's SynchronousQueue is always empty: every task gets a thread.
      */
-    private static volatile BlockingQueue<Runnable> drainWaitQueue = waitQueueOf(thePool);
+    private static volatile ThreadPoolExecutor drainGatePool = gatePoolOf(thePool);
+    private static volatile BlockingQueue<Runnable> drainWaitQueue = drainGatePool == null ? null : drainGatePool.getQueue();
 
-    private static BlockingQueue<Runnable> waitQueueOf(Executor e) {
+    private static ThreadPoolExecutor gatePoolOf(Executor e) {
         if (e instanceof CountingExecutor) {
             e = ((CountingExecutor) e).delegate;
         }
-        return FLUSH_ONLY_WHEN_WAITING && e instanceof ThreadPoolExecutor ? ((ThreadPoolExecutor) e).getQueue() : null;
+        return FLUSH_GATED && e instanceof ThreadPoolExecutor ? (ThreadPoolExecutor) e : null;
     }
 
-    /** Whether a drain whose budget is spent flushes now (see FLUSH_ONLY_WHEN_WAITING). */
-    static boolean flushWanted() {
+    /**
+     * How many successors past the budget a drain is to run between free-worker checks in the busy mode: the check
+     * (getActiveCount) takes the executor's lock and reads every worker's lock word, so it is not made per task. It
+     * adds at most this many task runs to a drain's bound while a submission waits and no worker is free.
+     */
+    static final long FREE_WORKER_RECHECK = 64;
+
+    /**
+     * The flush gate (see FLUSH_MODE), read by a drain whose budget is spent, at a successor it found: 0 means flush
+     * now; a positive n means run on, with n as the new budget, and ask again when it is spent (1 when nothing waits,
+     * so that the next successor asks; FREE_WORKER_RECHECK when a worker is free).
+     */
+    static long flushGate() {
         BlockingQueue<Runnable> q = drainWaitQueue;
-        return q == null || !q.isEmpty();
+        if (q == null) {
+            return 0;
+        }
+        if (q.isEmpty()) {
+            return 1;
+        }
+        if (!FLUSH_NEEDS_NO_FREE_WORKER) {
+            return 0;
+        }
+        // getActiveCount counts the workers running a task (each holds its own lock meanwhile); one that is parked in
+        // take(), or between tasks, is free and takes the queue's head by itself.
+        ThreadPoolExecutor p = drainGatePool;
+        if (p == null || p.getActiveCount() >= p.getPoolSize()) {
+            return 0;
+        }
+        return FREE_WORKER_RECHECK;
     }
 
     // ---- The registry of pending futures (debug level, off by default) ----
