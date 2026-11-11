@@ -14,7 +14,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Bounded drains (J1, Pool.setDrainBound). A drain runs at most B tasks inline and hands the rest back to the pool,
+ * Bounded drains (J1, Pool.setDrainBound). A drain runs its own item plus at most B successors inline and hands the
+ * rest back to the pool,
  * so that a pool worker returns regularly even while a guard stays hot forever, and a submission waiting in the pool
  * is reached.
  * <p>

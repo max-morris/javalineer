@@ -356,6 +356,12 @@ public class Pool {
      * (off) a drain runs as long as its queue stays nonempty, which is the behavior before J1. The bound starts at
      * the system property JAVALINEER_DRAIN_BOUND (a number, or "off"), else {@link #DEFAULT_DRAIN_BOUND}. A change
      * applies to drains that start after it.
+     * <p>
+     * Scope of the progress guarantee: it holds for a FIFO executor with one queue that every worker takes from (the
+     * fixed pool, which is the default, and the dynamic pool), with bounded drains on for the whole run: a program that
+     * relies on it must not call setDrainBound(0) midway. The fork-join pool is excluded: a flushed drain lands on the
+     * submitting worker's own deque, which that worker keeps serving, so a submission from outside can still wait
+     * forever.
      *
      * @param b The bound; 0 or less turns bounded drains off.
      */
