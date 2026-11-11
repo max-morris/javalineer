@@ -385,25 +385,40 @@ final class GuardTask extends CompletableFuture<Void> {
                         tr.loop(succ);
                     } else {
                         // An executor which runs a submission synchronously (DebugPool, called outside its loop)
-                        // can run this inside another loop on the same thread.
-                        succ.handOff_();
+                        // can run this inside another loop on the same thread. Unbounded (no J1 flush): a flush here
+                        // would submit synchronously again, one level deeper per flush.
+                        succ.handOff_(Long.MAX_VALUE);
                     }
                 });
             } catch (RejectedExecutionException e) {
                 // The pool was shut down or swapped. Running the successor inline is always safe; when this is
                 // called from releaseAll it only delays the release of the acquisition's remaining guards until the
                 // successor's chain of handoffs ends. Skipping it would strand every task queued on its guard.
-                succ.handOff_();
+                // Unbounded (no J1 flush): a flush would only meet the same rejection.
+                succ.handOff_(Long.MAX_VALUE);
             }
         }
 
+        /**
+         * The trampoline loop. With bounded drains on (J1, {@link Pool#setDrainBound(int)}), the loop and the handoffs
+         * it runs share one budget of B task runs: once it is spent, a successor still pending, found by a handoff
+         * ({@link #handOff_(long)}) or left in the slot, is handed back to the pool and the loop returns, so that this
+         * pool task returns after at most B bodies.
+         */
         private void loop(GuardTask succ) {
+            long left = Pool.drainBudget();
             try {
                 while (succ != null) {
                     running = succ;
                     slot = null;
-                    succ.handOff_();
+                    left = succ.handOff_(left);
                     succ = slot;
+                    if (succ != null && left <= 0) {
+                        // J1 flush point (loop): the budget is spent and the slot holds the next successor.
+                        slot = null;
+                        submit(succ);
+                        succ = null;
+                    }
                 }
             } finally {
                 running = null;
@@ -414,19 +429,30 @@ final class GuardTask extends CompletableFuture<Void> {
 
     /**
      * Runs this task, which has been handed its guard by the release of its predecessor, and continues the
-     * {@link #free_()} handoff loop from it.
+     * {@link #free_()} handoff loop from it, running at most {@code left} tasks in all (J1, bounded drains). If the
+     * budget runs out while a successor is pending, the successor is handed to the pool (a trampoline loop of its
+     * own) and this returns.
+     *
+     * @param left The number of task runs this drain may still make; {@code Long.MAX_VALUE} for unbounded.
+     * @return What is left of the budget.
      */
-    private void handOff_() {
+    private long handOff_(long left) {
         GuardTask gt = this;
         while (true) {
             gt.run_();
+            left--;
             if (gt.isDummyTask()) {
-                return;
+                return left;
             }
             assert gt.guard.locked.compareAndSet(true, false);
             gt = gt.takeNext();
             if (gt == null) {
-                return;
+                return left;
+            }
+            if (left <= 0) {
+                // J1 flush point (handoff): released, successor found, budget spent.
+                Trampoline.submit(gt);
+                return left;
             }
         }
     }
@@ -455,13 +481,22 @@ final class GuardTask extends CompletableFuture<Void> {
             Trampoline.submit(gt);
             return;
         }
+        // J1: at most B task runs here, then the rest goes back to the pool, so that a caller of runGuarded returns
+        // after its own body plus at most B - 1 handoffs.
+        long left = Pool.drainBudget();
         do {
             gt.run_();
+            left--;
             if (gt.isDummyTask()) {
                 return;
             }
             assert gt.guard.locked.compareAndSet(true, false);
             gt = gt.takeNext();
+            if (gt != null && left <= 0) {
+                // J1 flush point (top-level free_): released, successor found, budget spent.
+                Trampoline.submit(gt);
+                return;
+            }
         } while (gt != null);
     }
 

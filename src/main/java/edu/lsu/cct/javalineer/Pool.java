@@ -320,6 +320,55 @@ public class Pool {
         }
     }
 
+    // ---- Bounded drains (J1) ----
+
+    /** The default drain bound: see {@link #setDrainBound(int)}. */
+    public static final int DEFAULT_DRAIN_BOUND = 256;
+
+    private static volatile int drainBound = parseDrainBound(System.getProperty("JAVALINEER_DRAIN_BOUND"));
+
+    static int parseDrainBound(String s) {
+        if (s == null || s.isBlank()) {
+            return DEFAULT_DRAIN_BOUND;
+        }
+        s = s.strip();
+        if (s.equalsIgnoreCase("off") || s.equalsIgnoreCase("false")) {
+            return 0;
+        }
+        try {
+            return Math.max(0, Integer.parseInt(s));
+        } catch (NumberFormatException e) {
+            return DEFAULT_DRAIN_BOUND;
+        }
+    }
+
+    /**
+     * Sets the drain bound B (J1, bounded drains). A drain is the loop in which a thread that released a guard runs
+     * the tasks queued behind it, one after another: the top-level drain of a runGuarded call that ran inline, and the
+     * trampoline loop of a pool task. With B positive, a drain runs at most B tasks and then hands the next one back to
+     * the pool, so every pool worker returns to the pool regularly and a submission waiting in the pool is reached
+     * even while a guard stays hot forever. That is the premise of the never-ending progress theorem; with B = 0
+     * (off) a drain runs as long as its queue stays nonempty, which is the behavior before J1. The bound starts at
+     * the system property JAVALINEER_DRAIN_BOUND (a number, or "off"), else {@link #DEFAULT_DRAIN_BOUND}. A change
+     * applies to drains that start after it.
+     *
+     * @param b The bound; 0 or less turns bounded drains off.
+     */
+    public static void setDrainBound(int b) {
+        drainBound = Math.max(0, b);
+    }
+
+    /** @return The drain bound B; 0 means bounded drains are off. */
+    public static int getDrainBound() {
+        return drainBound;
+    }
+
+    /** The budget of task runs for a drain that starts now: B, or Long.MAX_VALUE when bounded drains are off. */
+    static long drainBudget() {
+        int b = drainBound;
+        return b > 0 ? b : Long.MAX_VALUE;
+    }
+
     // ---- The registry of pending futures (debug level, off by default) ----
 
     private static volatile boolean trackPending =
