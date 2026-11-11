@@ -345,8 +345,9 @@ public class Pool {
     /**
      * Sets the drain bound B (J1, bounded drains). A drain is the loop in which a thread that released a guard runs
      * the tasks queued behind it, one after another: the top-level drain of a runGuarded call that ran inline, and the
-     * trampoline loop of a pool task. With B positive, a drain runs at most B tasks and then hands the next one back to
-     * the pool, so every pool worker returns to the pool regularly and a submission waiting in the pool is reached
+     * trampoline loop of a pool task. With B positive, a drain runs at most B tasks inline (the top-level drain: B
+     * successors after the caller's own task; a pool task's loop: its own item and B - 1 successors) and then hands
+     * the next one back to the pool, so every pool worker returns to the pool regularly and a submission waiting in the pool is reached
      * even while a guard stays hot forever. That is the premise of the never-ending progress theorem; with B = 0
      * (off) a drain runs as long as its queue stays nonempty, which is the behavior before J1. The bound starts at
      * the system property JAVALINEER_DRAIN_BOUND (a number, or "off"), else {@link #DEFAULT_DRAIN_BOUND}. A change
