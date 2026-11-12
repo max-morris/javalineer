@@ -398,20 +398,21 @@ public class Pool {
     }
 
     /*
-     * PROTOTYPE (local branches j1/c12-fix and j1/c12-fix2, for measurement; outside the shape j1-model-plan.md
-     * section 6 requires). JAVALINEER_DRAIN_FLUSH picks when a drain whose budget is spent flushes:
+     * The drain flush gate. JAVALINEER_DRAIN_FLUSH picks when a drain whose budget is spent flushes:
      *   always   J1 as specified: at once.
-     *   waiting  (j1/c12-fix) only while a submission waits in the executor's queue. A flush exists to let waiting
-     *            pool work reach a worker; with nothing waiting it only moves the drain off the thread that issues
-     *            (con1_2) or strands it behind workers that are all busy (con1_8, the arena at T = 32).
-     *   busy     (j1/c12-fix2, the default here) only while a submission waits AND no worker is free. A free worker
+     *   waiting  only while a submission waits in the executor's queue. A flush exists to let waiting pool work
+     *            reach a worker; with nothing waiting it only moves the drain off the thread that issues (con1_2) or
+     *            strands it behind workers that are all busy (con1_8, the arena at T = 32).
+     *   busy     (the default) only while a submission waits AND no worker is free. A free worker
      *            (one not running a task) takes the queue's head by itself, so a flush then helps nobody; it only
      *            strands the drain behind the waiter, as at the start of every arena pass, when the issuers just
      *            submitted wait for parked workers to wake. Once every worker is busy, a waiter makes every drain
      *            flush at its next successor past the budget, as with waiting.
      * The waiter's bound: once a submission waits and no worker is free, and for as long as that lasts, a drain on a
      * worker runs at most B more successors (waiting), or B + FREE_WORKER_RECHECK (busy), before it flushes. Lost
-     * against J1: the unconditional bound on a runGuarded caller.
+     * against J1: the unconditional bound on a runGuarded caller. Progress on the fixed pool under the busy gate is
+     * proved in Guardian's Lean model of Guards (proof/notes/claims.md: C1.progress_fixed_pool_busy and
+     * C1.progress_fixed_pool_busy_one); the waiting gate is a special case.
      */
     private static final String FLUSH_MODE =
             System.getProperty("JAVALINEER_DRAIN_FLUSH", "busy").strip().toLowerCase();
