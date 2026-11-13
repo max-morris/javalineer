@@ -32,9 +32,12 @@ import java.util.concurrent.atomic.AtomicReference;
  * (runPartitioned, runPartitionedFut, reducePartitioned) goes through this one admission, so they cannot deadlock
  * against each other either. A list may appear more than once in a call only with read intents (each is admitted, in
  * a row): with a write, the call's second admission would conflict with its own first one and wait forever, so the
- * call is rejected with IllegalArgumentException. Under fair admission such a list is admitted once, for its first
- * position: its positions have the same read range, and a second admission could be queued behind a write that came
- * between the two, which waits for the first, so the call would never be admitted.
+ * call is rejected with IllegalArgumentException. Under fair admission all of a call's positions on one list are one
+ * admission, all or nothing: a read (they are all reads) of the union of their ranges, made for the list's first
+ * position in the order and released once. Admitted one by one, the second could be queued behind a write that came
+ * between the two, which waits for the first, so the call would never be admitted. The rejection of a list repeated
+ * with a write stays under both policies: merged into one read-write admission it would no longer deadlock, but
+ * nothing admits a call's parts against each other, so a part's ghost read could meet another part's write.
  * <p>
  * The order in which a list admits the calls that request it is {@link RangeAccountant}'s policy: reader preference
  * by default, or fair admission ({@code -DJAVALINEER_FAIR_RANGES=true}), under which a request is also refused while a
@@ -100,6 +103,20 @@ final class PartCall {
             if (lists[a] == lists[b] && (kinds[a] != PartIntentKind.ReadOnly || kinds[b] != PartIntentKind.ReadOnly)) {
                 throw new IllegalArgumentException("a list appears more than once in a partitioned call (arguments "
                         + (Math.min(a, b) + 1) + " and " + (Math.max(a, b) + 1) + "), not only with read intents");
+            }
+        }
+        if (RangeAccountant.FAIR) {
+            // One admission per list (admitFrom, release), for the list's first position in the order: widen that
+            // position's range to the union of the list's positions' ranges. ofChunks and ofRanges give every position
+            // of a list the same range, so today this changes nothing; it keeps the one admission covering them all.
+            for (int k = 1, head = 0; k < order.length; k++) {
+                if (lists[order[k]] == lists[order[head]]) {
+                    int h = order[head], j = order[k];
+                    lo[h] = Math.min(lo[h], lo[j]);
+                    hi[h] = Math.max(hi[h], hi[j]);
+                } else {
+                    head = k;
+                }
             }
         }
     }
@@ -266,7 +283,8 @@ final class PartCall {
         int j = order[k];
         var list = lists[j];
         if (RangeAccountant.FAIR && k > 0 && lists[order[k - 1]] == list) {
-            // A list repeated in the call (read intents only, the same range): its first position's read covers it
+            // A list repeated in the call (read intents only): its first position's read, of the union of the
+            // positions' ranges (the constructor), is the list's one admission
             admitted = k + 1;
             return admitFrom(k + 1);
         }
