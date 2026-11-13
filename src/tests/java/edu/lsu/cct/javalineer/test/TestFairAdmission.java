@@ -2,6 +2,7 @@ package edu.lsu.cct.javalineer.test;
 
 import edu.lsu.cct.javalineer.PartitionRangeProvider;
 import edu.lsu.cct.javalineer.PartitionableList;
+import edu.lsu.cct.javalineer.PartitionableListExt;
 import edu.lsu.cct.javalineer.Pool;
 
 import java.lang.reflect.Field;
@@ -12,9 +13,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerArray;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * The admission policy of a list's ranges (RangeAccountant): reader preference by default, fair admission with
@@ -33,12 +37,22 @@ import java.util.concurrent.atomic.AtomicIntegerArray;
  * <li>4, a call that reads one list twice, with writes of that list made all along, completes (under fair admission
  * the list is admitted once for the call, or a write between the two admissions would deadlock it);</li>
  * <li>5, random calls on one to three of three lists, with random kinds and ranges, from four threads: every call
- * completes, and no call runs alongside a conflicting one (guard order and exclusion under both policies).</li>
+ * completes, and no call runs alongside a conflicting one (guard order and exclusion under both policies);</li>
+ * <li>6 to 9, a list given more than once to one call. Under fair admission all of a call's positions on one list are
+ * one admission (PartCall), so a write made between two of them cannot deadlock the call (finding R4-1 of Guardian's
+ * proof/notes/partadmit.md). In 6, 8 and 9 a held write keeps the call waiting, a write made after the call queues
+ * behind it, and the held write is then released: the call must complete within HANG_SECONDS, and each write after
+ * it. 6: one list read twice; 7: a list given twice with a write is still rejected at the call, under both policies,
+ * and nothing is held after; 8: two reads of one list over overlapping parts (a provider's, and ghosts), with a
+ * write of the overlap; 9: two lists each read twice, positions interleaved, with a write of each list and a write of
+ * both.</li>
  * </ul>
  */
 public class TestFairAdmission {
     static final long TIMEOUT_SECONDS = 120;
     static final long SETTLE_MILLIS = 300;
+    // How long a call that a write made between two of its admissions would deadlock is given (cases 6, 8, 9)
+    static final long HANG_SECONDS = 20;
     static int checks = 0;
     static final boolean FAIR = fairPolicy();
 
@@ -457,17 +471,248 @@ public class TestFairAdmission {
         }
     }
 
+    // Runs call on a plain thread and returns once its body is running: the body (call's argument) waits for letGo.
+    // A one-part call admitted at once runs its body inline on the calling thread, so only that thread blocks. The
+    // returned future completes when the call does.
+    static CompletableFuture<Void> holdUntil(CountDownLatch letGo,
+                                            Function<Runnable, CompletableFuture<Void>> call) throws Exception {
+        var running = new CountDownLatch(1);
+        var over = new CompletableFuture<Void>();
+        Runnable body = () -> {
+            running.countDown();
+            try {
+                letGo.await();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        };
+        var t = new Thread(() -> call.apply(body).whenComplete((v, e) -> {
+            if (e != null) {
+                over.completeExceptionally(e);
+            } else {
+                over.complete(null);
+            }
+        }));
+        t.setDaemon(true);
+        t.start();
+        check(running.await(TIMEOUT_SECONDS, TimeUnit.SECONDS), "the holding call's body runs");
+        return over;
+    }
+
+    // Waits for a call that would deadlock if a write made between two of its admissions on one list got ahead of
+    // the second (finding R4-1).
+    static void completesOrHangs(CompletableFuture<Void> f, String what) throws Exception {
+        try {
+            f.get(HANG_SECONDS, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            check(false, what + " did not complete within " + HANG_SECONDS + " s: a write made between two "
+                    + "admissions of one list in one call deadlocks it");
+        }
+    }
+
+    // The shape of cases 6, 8 and 9: hold makes a call that holds what call needs until it is released; call is
+    // made, then the writes, each once the one before is queued; then the hold is released. call must complete, and
+    // so must each write. Under fair admission the writes named in after must run after call: they are queued behind
+    // it on the first list it waits for. (A write of only a later list of call's may be admitted there first.)
+    static void writeBetween(String name, Function<Runnable, CompletableFuture<Void>> hold,
+                             Function<List<String>, CompletableFuture<Void>> call,
+                             List<Function<List<String>, CompletableFuture<Void>>> writes, List<String> after,
+                             PartitionableList<?>... lists) throws Exception {
+        var order = Collections.synchronizedList(new ArrayList<String>());
+        var letGo = new CountDownLatch(1);
+        var held = holdUntil(letGo, hold);
+        var c = call.apply(order);
+        Thread.sleep(SETTLE_MILLIS);
+        check(!c.isDone(), name + ": the call waits for the held write");
+        var ws = new ArrayList<CompletableFuture<Void>>();
+        for (var w : writes) {
+            ws.add(w.apply(order));
+            Thread.sleep(SETTLE_MILLIS);
+        }
+        for (var w : ws) {
+            check(!w.isDone(), name + ": a write made after the call waits");
+        }
+        letGo.countDown();
+        completesOrHangs(c, name + ": the call");
+        for (var w : ws) {
+            completesOrHangs(w, name + ": a write made after the call");
+        }
+        held.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        if (FAIR) {
+            for (var w : after) {
+                check(order.indexOf("call") >= 0 && order.indexOf("call") < order.indexOf(w),
+                      name + ": the call ran before " + w + ", got " + order);
+            }
+        } else {
+            System.out.println("  " + name + " (reader preference): " + order);
+        }
+        check(order.size() == 1 + writes.size(), name + ": every call ran once, got " + order);
+        for (var l : lists) {
+            check(TestPartitionedRelease.heldRanges(l) == 0, name + ": nothing held after the calls");
+        }
+    }
+
+    // 6: one list read twice in one call (TwiceRead).
+    static void twiceReadWriteBetween() throws Exception {
+        var a = PartitionableList.of(16, i -> i);
+        var writing = new AtomicBoolean();
+        var bad = new AtomicInteger();
+        writeBetween("twice read",
+                     body -> PartitionableList.runPartitioned(1, a.write(), v -> body.run()),
+                     order -> PartitionableList.runPartitioned(1, a.read(), a.read(), (x, y) -> {
+                         if (writing.get() || !x.get(3).equals(y.get(3))) {
+                             bad.incrementAndGet();
+                         }
+                         order.add("call");
+                     }),
+                     List.of(order -> PartitionableList.runPartitioned(1, a.write(), v -> {
+                         writing.set(true);
+                         order.add("W");
+                         writing.set(false);
+                     })),
+                     List.of("W"), a);
+        // The same through runPartitionedFut, whose parts return futures
+        writeBetween("twice read, runPartitionedFut",
+                     body -> PartitionableList.runPartitioned(1, a.write(), v -> body.run()),
+                     order -> PartitionableListExt.runPartitionedFut(1, a.read(), a.read(), (x, y) -> {
+                         order.add("call");
+                         return CompletableFuture.completedFuture(null);
+                     }),
+                     List.of(order -> PartitionableList.runPartitioned(1, a.write(), v -> order.add("W"))),
+                     List.of("W"), a);
+        check(bad.get() == 0, "twice read: the call saw no write");
+    }
+
+    // 7: a list given twice with a write is rejected at the call under both policies (PartCall's constructor), with
+    // nothing admitted; with read intents only, the same calls run (TwinRW, with the check kept).
+    static void twinReadWriteRejected() throws Exception {
+        var a = PartitionableList.of(16, i -> i);
+        var b = PartitionableList.of(16, i -> i);
+        var ran = new AtomicInteger();
+        List<Supplier<CompletableFuture<Void>>> rejected = List.of(
+                () -> PartitionableList.runPartitioned(2, a.read(), a.write(), (x, y) -> ran.incrementAndGet()),
+                () -> PartitionableList.runPartitioned(2, a.write(), a.read(), (x, y) -> ran.incrementAndGet()),
+                () -> PartitionableList.runPartitioned(2, a.read(), a.readWrite(), (x, y) -> ran.incrementAndGet()),
+                () -> PartitionableList.runPartitioned(2, a.readWrite(), a.read(), (x, y) -> ran.incrementAndGet()),
+                () -> PartitionableList.runPartitioned(2, a.write(), a.write(), (x, y) -> ran.incrementAndGet()),
+                () -> PartitionableList.runPartitioned(2, a.readWrite(), a.readWrite(),
+                                                       (x, y) -> ran.incrementAndGet()),
+                // With ghosts: a merged read-write admission would let part 0's ghost read meet part 1's write
+                () -> PartitionableList.runPartitioned(2, 1, a.read(), a.write(), (x, y) -> ran.incrementAndGet()),
+                () -> PartitionableList.runPartitioned(range(0, 8), a.read(), a.write(),
+                                                       (x, y) -> ran.incrementAndGet()),
+                // Not adjacent as given: the guard-order sort puts them side by side
+                () -> PartitionableList.runPartitioned(2, a.read(), b.read(), a.write(),
+                                                       (x, y, z) -> ran.incrementAndGet()),
+                () -> PartitionableListExt.runPartitionedFut(2, a.read(), a.readWrite(), (x, y) -> {
+                    ran.incrementAndGet();
+                    return CompletableFuture.completedFuture(null);
+                }));
+        int n = 0;
+        for (var call : rejected) {
+            boolean threw = false;
+            try {
+                call.get();
+            } catch (IllegalArgumentException e) {
+                threw = e.getMessage() != null && e.getMessage().contains("more than once");
+            }
+            check(threw, "twin read-write: call " + n + " is rejected at the call");
+            n++;
+        }
+        check(ran.get() == 0, "twin read-write: no part of a rejected call ran, got " + ran.get());
+        check(TestPartitionedRelease.heldRanges(a) == 0 && TestPartitionedRelease.heldRanges(b) == 0,
+              "twin read-write: nothing held after the rejected calls");
+        PartitionableList.runPartitioned(2, 1, a.read(), a.read(), (x, y) -> ran.incrementAndGet())
+                         .get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        PartitionableList.runPartitioned(2, a.read(), b.read(), a.read(), (x, y, z) -> ran.incrementAndGet())
+                         .get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        check(ran.get() == 4, "twin read-write: the read-only twins ran, got " + ran.get());
+        check(TestPartitionedRelease.heldRanges(a) == 0 && TestPartitionedRelease.heldRanges(b) == 0,
+              "twin read-write: nothing held after the read-only twins");
+    }
+
+    // A provider of two parts, [0, 10) and [6, 16): they overlap, which a call that only reads may do.
+    static PartitionRangeProvider overlapping() {
+        return new PartitionRangeProvider() {
+            public int numPartitions() {
+                return 2;
+            }
+
+            public int getWritableBegin(int p) {
+                return p == 0 ? 0 : 6;
+            }
+
+            public int getWritableEnd(int p) {
+                return p == 0 ? 10 : 16;
+            }
+        };
+    }
+
+    // 8: two reads of one list over overlapping parts, and a write of the overlap made between (TwiceReadOverlap).
+    static void overlapReadsWriteBetween() throws Exception {
+        var a = PartitionableList.of(16, i -> i);
+        writeBetween("overlapping parts",
+                     body -> PartitionableList.runPartitioned(1, a.write(), v -> body.run()),
+                     order -> PartitionableList.runPartitioned(overlapping(), a.read(), a.read(), (x, y) -> {
+                         synchronized (order) {
+                             if (!order.contains("call")) {
+                                 order.add("call");
+                             }
+                         }
+                     }),
+                     List.of(order -> PartitionableList.runPartitioned(range(6, 10), a.write(), v -> order.add("W"))),
+                     List.of("W"), a);
+        // Ghosts: two parts of [2, 8) and [8, 14) read [0, 10) and [6, 16); the write is of [6, 10)
+        writeBetween("overlapping ghosts",
+                     body -> PartitionableList.runPartitioned(1, a.write(), v -> body.run()),
+                     order -> PartitionableList.runPartitioned(2, 2, a.read(), a.read(), (x, y) -> {
+                         synchronized (order) {
+                             if (!order.contains("call")) {
+                                 order.add("call");
+                             }
+                         }
+                     }),
+                     List.of(order -> PartitionableList.runPartitioned(range(6, 10), a.write(), v -> order.add("W"))),
+                     List.of("W"), a);
+    }
+
+    // 9: two lists, each read twice, positions interleaved; a write of each list and a write of both made between
+    // (TwiceReadTwoLists).
+    static void twoListsTwiceReadWriteBetween() throws Exception {
+        var a = PartitionableList.of(16, i -> i);
+        var b = PartitionableList.of(16, i -> -i);
+        writeBetween("two lists read twice",
+                     body -> PartitionableList.runPartitioned(1, a.write(), b.write(), (x, y) -> body.run()),
+                     order -> PartitionableList.runPartitioned(1, a.read(), b.read(), a.read(), b.read(),
+                                                               (w, x, y, z) -> order.add("call")),
+                     List.of(order -> PartitionableList.runPartitioned(1, a.write(), v -> order.add("Wa")),
+                             order -> PartitionableList.runPartitioned(1, b.write(), v -> order.add("Wb")),
+                             order -> PartitionableList.runPartitioned(1, a.write(), b.write(),
+                                                                       (x, y) -> order.add("Wab"))),
+                     List.of("Wab"), a, b);
+    }
+
     public static void main(String[] args) throws Exception {
         Test.requireAssert();
         System.out.println("TestFairAdmission under " + (FAIR ? "fair admission" : "reader preference"));
-        // An argument (0 to 5) runs just that case
+        // An argument (0 to 9) runs just that case
         int only = args.length > 0 ? Integer.parseInt(args[0]) : -1;
-        if (only < 0 || only == 0) readBehindQueuedWrite();
-        if (only < 0 || only == 1) disjointNotDelayed();
-        if (only < 0 || only == 2) batonChain();
-        if (only < 0 || only == 3) starvation();
-        if (only < 0 || only == 4) sameListTwice();
-        if (only < 0 || only == 5) randomMix();
+        try {
+            if (only < 0 || only == 0) readBehindQueuedWrite();
+            if (only < 0 || only == 1) disjointNotDelayed();
+            if (only < 0 || only == 2) batonChain();
+            if (only < 0 || only == 3) starvation();
+            if (only < 0 || only == 4) sameListTwice();
+            if (only < 0 || only == 5) randomMix();
+            if (only < 0 || only == 6) twiceReadWriteBetween();
+            if (only < 0 || only == 7) twinReadWriteRejected();
+            if (only < 0 || only == 8) overlapReadsWriteBetween();
+            if (only < 0 || only == 9) twoListsTwiceReadWriteBetween();
+        } catch (Throwable t) {
+            // Exit even when a deadlocked call leaves the pool's threads waiting
+            t.printStackTrace();
+            System.exit(1);
+        }
         System.out.println("TestFairAdmission passed (" + checks + " checks)");
         System.exit(0);
     }
